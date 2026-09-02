@@ -55,6 +55,23 @@ function addMessage(text, sender) {
   return div;
 }
 
+// Bir gorsel mesaji ekler (ayri stil ile)
+function addImageMessage(imgUrl, alt) {
+  const div = document.createElement('div');
+  div.className = `message bot image-msg`;
+  div.innerHTML = '<strong>🤖 Asistan:</strong><br><img src="' + escapeHtml(imgUrl) + '" alt="' + escapeHtml(alt) + '" class="generated-image">';
+  messagesEl.appendChild(div);
+  messagesEl.scrollTop = messagesEl.scrollHeight;
+  return div;
+}
+
+// Basit duz metin cikarici (gorsel icerikli mesajlari atlar)
+function messagePlainText(div) {
+  const img = div.querySelector('img');
+  if (img) return ''; // gorsel mesajini sohbet gecmisinde metne donusturme
+  return div.textContent.replace(/.*?:\s*/, '').trim();
+}
+
 // Very light markdown rendering
 function renderMarkdown(text) {
   let safe = escapeHtml(text);
@@ -95,9 +112,7 @@ async function sendMessage() {
   sendBtn.disabled = true;
 
   try {
-    const response = await callGemini(text);
-    typingEl.remove();
-    addMessage(response, 'bot');
+    await handleInteraction(text, typingEl);
   } catch (err) {
     typingEl.remove();
     addMessage('⚠️ Hata: ' + err.message, 'bot');
@@ -108,23 +123,23 @@ async function sendMessage() {
 }
 
 async function callGemini(prompt) {
-  const system = 'Sen Türkçe konuşan yardımsever bir AI asistanısın. Kısa ve net cevaplar ver.';
+  const system = 'Sen Türkçe konuşan yardımsever bir AI asistanısın. Kısa ve net cevaplar ver. ' +
+    'Kullanıcı bir resim/görsel/çizim/tablo/vitrin isterse veya yaratıcı bir görsel talep ederse, ' +
+    '"generate_image" aracını çağır ve prompt parametresine görselin ayrıntılı İngilizce açıklamasını yaz. ' +
+    'Aksi halde normal şekilde metin yanıtı ver.';
 
-  // Build conversational context as plain text
   const historyParts = [];
   const history = messagesEl.querySelectorAll('.message');
   history.forEach((m) => {
-    const isBot = m.classList.contains('bot');
-    const txt = m.textContent.replace(/.*?:\s*/, '').trim();
+    const txt = messagePlainText(m);
     if (txt && !txt.startsWith('Asistan yazıyor') && !txt.startsWith('Merhaba! Ben')) {
+      const isBot = m.classList.contains('bot');
       historyParts.push((isBot ? 'Asistan: ' : 'Kullanıcı: ') + txt);
     }
   });
   historyParts.push('Kullanıcı: ' + prompt);
   const inputText = historyParts.join('\n');
 
-  // Anahtari temizle: bosluklar ve ASCII olmayan karakterleri ayikla
-  // (kopyala-yapistir sirasinda gorunmez/ozel karakterler basliga girip hata veriyor)
   const cleanKey = String(apiKey).replace(/[^\x20-\x7E]/g, '').trim();
 
   const res = await fetch('https://generativelanguage.googleapis.com/v1beta/interactions', {
@@ -136,7 +151,21 @@ async function callGemini(prompt) {
     body: JSON.stringify({
       model: MODEL,
       input: inputText,
-      system_instruction: system
+      system_instruction: system,
+      tools: [
+        {
+          type: 'function',
+          name: 'generate_image',
+          description: 'Kullanıcı istediğinde bir resim/görsel oluşturur. Görselin İngilizce detaylı açıklamasını prompt olarak verir.',
+          parameters: {
+            type: 'OBJECT',
+            properties: {
+              prompt: { type: 'STRING', description: 'Görselin detaylı İngilizce açıklaması' }
+            },
+            required: ['prompt']
+          }
+        }
+      ]
     })
   });
 
@@ -149,18 +178,48 @@ async function callGemini(prompt) {
     throw new Error(msg);
   }
 
-  const data = await res.json();
+  return await res.json();
+}
 
-  // Yanit, steps icindeki model_output adiminin content[].text alaninda gelir
-  let answer = data.output_text;
-  if (!answer && Array.isArray(data.steps)) {
-    const modelOut = data.steps.find((s) => s.type === 'model_output');
-    if (modelOut && Array.isArray(modelOut.content)) {
-      const textParts = modelOut.content.filter((c) => c.type === 'text').map((c) => c.text);
-      if (textParts.length) answer = textParts.join('\n');
+// Araclari + metni birlikte yonetir
+async function handleInteraction(prompt, typingEl) {
+  const data = await callGemini(prompt);
+
+  // Araç çağrısı var mı kontrol et
+  let imagePrompt = null;
+  if (Array.isArray(data.steps)) {
+    const fc = data.steps.find((s) => s.type === 'function_call' && s.name === 'generate_image');
+    if (fc && fc.arguments) {
+      imagePrompt = fc.arguments.prompt || null;
     }
   }
-  return answer || 'Yanıt alınamadı.';
+
+  if (imagePrompt) {
+    // Asistan aracı çağırdı - görseli üret ve göster
+    typingEl.remove();
+    const genEl = addMessage('🖼️ Görsel oluşturuluyor...', 'bot');
+    genEl.classList.add('typing');
+    try {
+      const imgUrl = 'https://image.pollinations.ai/prompt/' + encodeURIComponent(imagePrompt) + '?width=768&height=768&nologo=true&model=flux';
+      addImageMessage(imgUrl, imagePrompt);
+      genEl.remove();
+    } catch (e) {
+      genEl.remove();
+      addMessage('⚠️ Görsel oluşturulamadı: ' + e.message, 'bot');
+    }
+  } else {
+    // Normal metin yanıtı
+    let answer = data.output_text;
+    if (!answer && Array.isArray(data.steps)) {
+      const modelOut = data.steps.find((s) => s.type === 'model_output');
+      if (modelOut && Array.isArray(modelOut.content)) {
+        const textParts = modelOut.content.filter((c) => c.type === 'text').map((c) => c.text);
+        if (textParts.length) answer = textParts.join('\n');
+      }
+    }
+    typingEl.remove();
+    addMessage(answer || 'Yanıt alınamadı.', 'bot');
+  }
 }
 
 // Initialize
