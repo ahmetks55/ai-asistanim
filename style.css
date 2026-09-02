@@ -1,0 +1,223 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  padding: 20px;
+}
+
+.container {
+  width: 100%;
+  max-width: 800px;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 16px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  max-height: 95vh;
+}
+
+header {
+  text-align: center;
+  margin-bottom: 15px;
+}
+
+header h1 {
+  font-size: 1.8rem;
+  background: linear-gradient(90deg, #667eea, #764ba2);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.subtitle {
+  color: #666;
+  font-size: 0.9rem;
+}
+
+.settings {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  padding: 12px;
+  background: #f5f5ff;
+  border-radius: 10px;
+  margin-bottom: 15px;
+}
+
+.settings input[type="password"] {
+  flex: 1;
+  min-width: 200px;
+  padding: 10px;
+  border: 2px solid #ddd;
+  border-radius: 8px;
+  font-size: 14px;
+}
+
+.settings input[type="password"]:focus {
+  outline: none;
+  border-color: #667eea;
+}
+
+.settings button {
+  padding: 10px 16px;
+  background: #667eea;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: background 0.2s;
+}
+
+.settings button:hover {
+  background: #5a6fd6;
+}
+
+.checkbox {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.85rem;
+  color: #555;
+}
+
+.status {
+  font-size: 0.85rem;
+  color: #28a745;
+  font-weight: bold;
+}
+
+.status.error {
+  color: #dc3545;
+}
+
+.chat-area {
+  flex: 1;
+  overflow-y: auto;
+  padding: 10px;
+  background: #fafafa;
+  border-radius: 10px;
+  margin-bottom: 15px;
+  min-height: 200px;
+}
+
+.message {
+  margin-bottom: 12px;
+  padding: 12px 15px;
+  border-radius: 12px;
+  max-width: 85%;
+  line-height: 1.5;
+  animation: fadeIn 0.3s ease;
+}
+
+.message.bot {
+  background: white;
+  border: 1px solid #e0e0e0;
+  align-self: flex-start;
+}
+
+.message.user {
+  background: #667eea;
+  color: white;
+  align-self: flex-end;
+  margin-left: auto;
+}
+
+.message strong {
+  display: block;
+  margin-bottom: 4px;
+}
+
+.message pre {
+  background: #1e1e1e;
+  color: #f0f0f0;
+  padding: 12px;
+  border-radius: 8px;
+  overflow-x: auto;
+  margin: 8px 0;
+  font-size: 13px;
+}
+
+.message code {
+  background: #f0f0f0;
+  padding: 2px 5px;
+  border-radius: 4px;
+  font-size: 0.9em;
+}
+
+.message pre code {
+  background: transparent;
+  padding: 0;
+}
+
+.typing {
+  color: #888;
+  font-style: italic;
+}
+
+.input-area {
+  display: flex;
+  gap: 10px;
+  align-items: flex-end;
+}
+
+.input-area textarea {
+  flex: 1;
+  padding: 12px;
+  border: 2px solid #ddd;
+  border-radius: 10px;
+  font-size: 14px;
+  resize: vertical;
+  font-family: inherit;
+}
+
+.input-area textarea:focus {
+  outline: none;
+  border-color: #667eea;
+}
+
+.input-area button {
+  padding: 12px 24px;
+  background: #764ba2;
+  color: white;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: 600;
+  transition: background 0.2s;
+  white-space: nowrap;
+}
+
+.input-area button:hover {
+  background: #6a3f91;
+}
+
+.input-area button:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (max-width: 600px) {
+  .container {
+    padding: 12px;
+  }
+  .settings {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}

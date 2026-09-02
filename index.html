@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Asistanım - Ücretsiz Web Aracı</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>🤖 AI Asistanım</h1>
+      <p class="subtitle">Ücretsiz AI Aracı - Gemini API ile çalışır</p>
+    </header>
+
+    <div class="settings">
+      <input type="password" id="apiKey" placeholder="Gemini API anahtarınızı girin (AIza...)" autocomplete="off">
+      <button id="saveKey">Anahtarı Kaydet</button>
+      <label class="checkbox">
+        <input type="checkbox" id="rememberKey"> Anahtarı hatırla
+      </label>
+      <span id="keyStatus" class="status"></span>
+    </div>
+
+    <div class="chat-area">
+      <div id="messages" class="messages">
+        <div class="message bot">
+          <strong>🤖 Asistan:</strong> Merhaba! Ben ücretsiz çalışan AI asistanınızım. Aşağıdan bir şeyler sorabilirsiniz. Yazma, kod oluşturma, çeviri, özet çıkarma gibi birçok işte yardımcı olurum.
+        </div>
+      </div>
+    </div>
+
+    <div class="input-area">
+      <textarea id="userInput" rows="3" placeholder="Bana bir şey sorun..."></textarea>
+      <button id="sendBtn">Gönder →</button>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
