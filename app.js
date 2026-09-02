@@ -123,11 +123,15 @@ async function callGemini(prompt) {
   historyParts.push('Kullanıcı: ' + prompt);
   const inputText = historyParts.join('\n');
 
+  // Anahtari temizle: bosluklar ve ASCII olmayan karakterleri ayikla
+  // (kopyala-yapistir sirasinda gorunmez/ozel karakterler basliga girip hata veriyor)
+  const cleanKey = String(apiKey).replace(/[^\x20-\x7E]/g, '').trim();
+
   const res = await fetch('https://generativelanguage.googleapis.com/v1beta/interactions', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'x-goog-api-key': apiKey
+      'x-goog-api-key': cleanKey
     },
     body: JSON.stringify({
       model: MODEL,
