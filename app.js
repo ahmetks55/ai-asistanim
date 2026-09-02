@@ -110,18 +110,18 @@ async function sendMessage() {
 async function callGemini(prompt) {
   const system = 'Sen Türkçe konuşan yardımsever bir AI asistanısın. Kısa ve net cevaplar ver.';
 
-  // Build conversation history from previous messages
-  const steps = [];
+  // Build conversational context as plain text
+  const historyParts = [];
   const history = messagesEl.querySelectorAll('.message');
   history.forEach((m) => {
     const isBot = m.classList.contains('bot');
     const txt = m.textContent.replace(/.*?:\s*/, '').trim();
     if (txt && !txt.startsWith('Asistan yazıyor') && !txt.startsWith('Merhaba! Ben')) {
-      const role = isBot ? 'model' : 'user';
-      steps.push({ role, content: [{ type: 'text', text: txt }] });
+      historyParts.push((isBot ? 'Asistan: ' : 'Kullanıcı: ') + txt);
     }
   });
-  steps.push({ role: 'user', content: [{ type: 'text', text: prompt }] });
+  historyParts.push('Kullanıcı: ' + prompt);
+  const inputText = historyParts.join('\n');
 
   const res = await fetch('https://generativelanguage.googleapis.com/v1beta/interactions', {
     method: 'POST',
@@ -131,8 +131,8 @@ async function callGemini(prompt) {
     },
     body: JSON.stringify({
       model: MODEL,
-      input: steps,
-      config: { system_instruction: system }
+      input: inputText,
+      system_instruction: system
     })
   });
 
@@ -146,7 +146,17 @@ async function callGemini(prompt) {
   }
 
   const data = await res.json();
-  return data.output_text || 'Yanıt alınamadı.';
+
+  // Yanit, steps icindeki model_output adiminin content[].text alaninda gelir
+  let answer = data.output_text;
+  if (!answer && Array.isArray(data.steps)) {
+    const modelOut = data.steps.find((s) => s.type === 'model_output');
+    if (modelOut && Array.isArray(modelOut.content)) {
+      const textParts = modelOut.content.filter((c) => c.type === 'text').map((c) => c.text);
+      if (textParts.length) answer = textParts.join('\n');
+    }
+  }
+  return answer || 'Yanıt alınamadı.';
 }
 
 // Initialize
