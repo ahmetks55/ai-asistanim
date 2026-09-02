@@ -5,6 +5,11 @@ const apiKeyInput = document.getElementById('apiKey');
 const saveKeyBtn = document.getElementById('saveKey');
 const rememberKey = document.getElementById('rememberKey');
 const keyStatus = document.getElementById('keyStatus');
+const aiMode = document.getElementById('aiMode');
+const cloudFields = document.getElementById('cloudFields');
+const noticeLocal = document.getElementById('noticeLocal');
+const noticeCloud = document.getElementById('noticeCloud');
+const localStatus = document.getElementById('localStatus');
 
 const MODEL = 'gemini-3.5-flash';
 let apiKey = '';
@@ -19,7 +24,54 @@ function loadSavedKey() {
     keyStatus.textContent = '✓ Anahtar yüklendi';
     keyStatus.classList.remove('error');
   }
+  // Mod tercihini yükle
+  const mode = localStorage.getItem('ai_mode') || 'local';
+  aiMode.value = mode;
+  applyMode(mode);
 }
+
+function applyMode(mode) {
+  if (mode === 'cloud') {
+    cloudFields.style.display = 'flex';
+    noticeLocal.style.display = 'block';
+    noticeCloud.style.display = 'none';
+    localStatus.textContent = '';
+  } else {
+    cloudFields.style.display = 'none';
+    noticeLocal.style.display = 'none';
+    noticeCloud.style.display = 'block';
+    checkLocalOllama();
+  }
+}
+
+async function checkLocalOllama() {
+  localStatus.textContent = '🔍 Ollama kontrol ediliyor...';
+  localStatus.classList.remove('error', 'ok');
+  try {
+    const ctrl = new AbortController();
+    const to = setTimeout(() => ctrl.abort(), 4000);
+    const res = await fetch('http://localhost:11434/api/tags', { signal: ctrl.signal });
+    clearTimeout(to);
+    if (res.ok) {
+      const data = await res.json();
+      const models = (data.models || []).map((m) => m.name);
+      localStatus.textContent = models.length ? '✓ Bağlı — modeller: ' + models.join(', ') : '✓ Ollama açık, model yok';
+      localStatus.classList.add('ok');
+    } else {
+      localStatus.textContent = '⚠️ Ollama çalışmıyor (açık mı?)';
+      localStatus.classList.add('error');
+    }
+  } catch (e) {
+    localStatus.textContent = '⚠️ Ollama bulunamadı — yerel AI bağlantısı kurulamadı';
+    localStatus.classList.add('error');
+  }
+}
+
+aiMode.addEventListener('change', () => {
+  const mode = aiMode.value;
+  localStorage.setItem('ai_mode', mode);
+  applyMode(mode);
+});
 
 saveKeyBtn.addEventListener('click', () => {
   apiKey = apiKeyInput.value.trim();
@@ -340,7 +392,11 @@ async function sendMessage() {
   }
 
   try {
-    await handleInteraction(text, typingEl, allowedTools);
+    if (getMode() === 'local') {
+      await handleLocalChat(text, typingEl);
+    } else {
+      await handleInteraction(text, typingEl, allowedTools);
+    }
   } catch (err) {
     typingEl.remove();
     addMessage('⚠️ Hata: ' + err.message, 'bot');
@@ -463,6 +519,49 @@ async function handleInteraction(prompt, typingEl, allowedTools) {
 
 // Initialize
 loadSavedKey();
+
+// ------------------------------------------------
+// YEREL AI (OLLAMA) — anahtarsız, sınırsız sohbet
+// ------------------------------------------------
+function getMode() {
+  return aiMode.value === 'cloud' ? 'cloud' : 'local';
+}
+
+// Sohbet geçmişini Ollama formatına çevir
+function getLocalHistory(prompt) {
+  const history = [{ role: 'system', content: 'Sen Türkçe konuşan yardımsever ve detaylı bir AI asistanısın. Cevapların Türkçe, açıklayıcı ve kapsamlı olsun. Kullanıcı hikaye, şiir, özet, çeviri gibi metin isteklerinde düzgün, kapsamlı bir Türkçe metin cevabı ver.' }];
+  const msgs = messagesEl.querySelectorAll('.message');
+  msgs.forEach((m) => {
+    const txt = messagePlainText(m);
+    if (txt && !txt.startsWith('Asistan çalışıyor') && !txt.startsWith('Merhaba! Ben') && !txt.startsWith('Yerel') && !txt.startsWith('🔊') && !txt.startsWith('🖼') && !txt.startsWith('💻') && !txt.startsWith('🎬') && !txt.startsWith('🔍') && !txt.startsWith('**')) {
+      const role = m.classList.contains('bot') ? 'assistant' : 'user';
+      history.push({ role: role, content: txt });
+    }
+  });
+  history.push({ role: 'user', content: prompt });
+  return history;
+}
+
+async function handleLocalChat(prompt, typingEl) {
+  const model = 'qwen2.5:1.5b';
+  const res = await fetch('http://localhost:11434/api/chat', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model: model,
+      stream: false,
+      messages: getLocalHistory(prompt)
+    })
+  });
+  if (!res.ok) {
+    let msg = 'Yerel AI hatası (' + res.status + ')';
+    try { const e = await res.json(); msg = e.error || msg; } catch (e) {}
+    throw new Error(msg);
+  }
+  const data = await res.json();
+  typingEl.remove();
+  addMessage(data.message?.content || 'Yanıt alınamadı.', 'bot');
+}
 
 // ------------------------------------------------
 // ARAÇLARI GEMİNİ'SIZ, SINIRSIZ ÇALIŞTIR

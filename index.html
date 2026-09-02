@@ -14,16 +14,30 @@
     </header>
 
     <div class="settings">
-      <input type="password" id="apiKey" placeholder="Gemini auth anahtarınızı girin (AQ...)">
-      <button id="saveKey">Anahtarı Kaydet</button>
-      <label class="checkbox">
-        <input type="checkbox" id="rememberKey"> Anahtarı hatırla
-      </label>
-      <span id="keyStatus" class="status"></span>
+      <div class="mode-select">
+        <label>AI Modu:</label>
+        <select id="aiMode">
+          <option value="local">Yerel AI (Ollama — sınırsız, bedava)</option>
+          <option value="cloud">Bulut (Gemini — API anahtarı)</option>
+        </select>
+        <span id="localStatus" class="status"></span>
+      </div>
+
+      <div class="cloud-fields" id="cloudFields">
+        <input type="password" id="apiKey" placeholder="Gemini auth anahtarınızı girin (AQ...)">
+        <button id="saveKey">Anahtarı Kaydet</button>
+        <label class="checkbox">
+          <input type="checkbox" id="rememberKey"> Anahtarı hatırla
+        </label>
+        <span id="keyStatus" class="status"></span>
+      </div>
     </div>
 
-    <div class="notice">
-      ✨ Google AI Studio'dan alınan ücretsiz API anahtarınızı girip sohbet etmeye başlayın. Anahtarınız sadece tarayıcınızda saklanır.
+    <div class="notice" id="noticeCloud">
+      ✨ <b>Yerel AI modu seçili.</b> Kendi bilgisayarınızda çalışan Ollama ile <b>tamamen sınırsız ve ücretsiz</b> sohbet edin — anahtar gerekmez. (Bilgisayarınızda Ollama kurulu ve açık olmalı.) Görsel, ses, video, kod ve web arama araçları her iki modda da ücretsiz çalışır.
+    </div>
+    <div class="notice" id="noticeLocal" style="display:none">
+      ✨ <b>Bulut modu seçili.</b> Google AI Studio'dan alınan ücretsiz Gemini anahtarınızı girin. (Günlük ~20 istek kotası vardır; araçlar yine de sınırsızdır.)
     </div>
 
     <div class="chat-area">
