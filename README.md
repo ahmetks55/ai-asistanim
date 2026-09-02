@@ -1,12 +1,15 @@
 # 🤖 AI Asistanım
 
-Web tabanlı AI sohbet asistanı. Google Gemini'nin yeni **Interactions API**'sini ve **auth key** (AQ... formatı) kullanır. GitHub Pages üzerinde ücretsiz barındırılır.
+Web tabanlı, çok araçlı AI sohbet asistanı. Google Gemini'nin **Interactions API**'sini ve **auth key** (AQ... formatı) kullanır. GitHub Pages üzerinde ücretsiz barındırılır.
 
-## Özellikler
-- 💬 Sohbet arayüzü (yazma, kod, çeviri, özet)
-- 🆓 Google Gemini API (ücretsiz auth key)
-- 🔑 Anahtar tarayıcınızda saklanır
-- 📱 Mobil uyumlu tasarım
+## Özellikler / Araçlar
+- ✍️ **Sohbet** — Türkçe, detaylı cevaplar (hikaye, özet, çeviri, kompozisyon)
+- 🖼️ **Resim üretme** — "bir kedi resmi çiz" → otomatik görsel üretir
+- 🗣️ **Metni Sese Çevir (TTS)** — "bunu sesli oku" → Türkçe sesli okur
+- 🎬 **Video/Slayt Anlatım** — "bunun videosunu yap" → sesli animasyonlu slayt gösterisi
+- 💻 **Kod çalıştırma** — "2+2 kodu yaz ve çalıştır" → JavaScript çalıştırır
+- 🔍 **Web arama** — "internette ara..." → arama sonucu getirir
+- 🔑 Anahtar tarayıcınızda saklanır, herkese açık değildir
 
 ## Kurulum / Kullanım
 
@@ -19,15 +22,24 @@ Web tabanlı AI sohbet asistanı. Google Gemini'nin yeni **Interactions API**'si
 ### 2. Siteyi Kullanın
 1. [Siteyi açın](https://ahmetks55.github.io/ai-asistanim/)
 2. API anahtarınızı girin ve "Anahtarı Kaydet" deyin
-3. Sohbet etmeye başlayın
+3. Sohbet edin
 
 ## Teknolojiler
 - HTML / CSS / JavaScript
-- Google Gemini Interactions API `gemini-3.5-flash`
+- Google Gemini Interactions API (`gemini-3.5-flash`) — function calling ile araç kullanımı
+- Web Speech API (Türkçe seslendirme — ücretsiz)
+- HTML5 Canvas (video/slayt animasyonu — ücretsiz)
+- Pollinations görsel API (resim üretimi — ücretsiz)
+- DuckDuckGo Instant Answer (web arama — ücretsiz)
 - GitHub Pages (ücretsiz hosting)
 
-## Not
-Bu uygulama Google AI Studio'nun yeni **auth key** (AQ... formatı) sistemini kullanır. Eski `AIza...` ve sonraki `?key=` parametresi yerine `x-goog-api-key` başlığı ile doğrulama yapılır.
+## Araç Çağırma (Function Calling)
+Asistan, kullanıcının isteğine göre ilgili aracı otomatik seçer:
+- `generate_image` → görsel üretimi
+- `text_to_speech` → Türkçe seslendirme
+- `make_video` → slayt video
+- `run_code` → kod çalıştırma
+- `web_search` → web arama
 
 ## Lisans
 MIT
