@@ -111,8 +111,13 @@ async function sendMessage() {
 
   sendBtn.disabled = true;
 
+  // Açık bir görsel isteği mi? Sadece o zaman görsel aracını göndeririz.
+  const imageKW = /(resim|görsel|gorsel|fotoğraf|fotograf|çiz|çizim|tablo|manzara|karikatür|karikatur|vitrin|logo)/i;
+  const textKW = /(hikaye|şiir|siir|mektup|kompozisyon|özet|ozet|çeviri|ceviri|cümle|cumle|metin|mail|e.?mail|rapor|yaz\b)/i;
+  const isImageRequest = imageKW.test(text) && !textKW.test(text);
+
   try {
-    await handleInteraction(text, typingEl);
+    await handleInteraction(text, typingEl, isImageRequest);
   } catch (err) {
     typingEl.remove();
     addMessage('⚠️ Hata: ' + err.message, 'bot');
@@ -122,11 +127,10 @@ async function sendMessage() {
   }
 }
 
-async function callGemini(prompt) {
-  const system = 'Sen Türkçe konuşan yardımsever bir AI asistanısın. Kısa ve net cevaplar ver. ' +
-    'Kullanıcı bir resim/görsel/çizim/tablo/vitrin isterse veya yaratıcı bir görsel talep ederse, ' +
-    '"generate_image" aracını çağır ve prompt parametresine görselin ayrıntılı İngilizce açıklamasını yaz. ' +
-    'Aksi halde normal şekilde metin yanıtı ver.';
+async function callGemini(prompt, forceImage) {
+  const system = 'Sen Türkçe konuşan yardımsever ve detaylı bir AI asistanısın. Cevapların her zaman Türkçe, açıklayıcı ve detaylı olsun. ' +
+    'Sadece kullanıcı AÇIKÇA bir resim/görsel/fotoğraf/çizim yapmamı isterse "generate_image" aracını çağır ve "prompt" parametresine görselin Türkçe, çok detaylı ve sanatsal açıklamasını yaz. ' +
+    'Kullanıcı hikaye, şiir, mektup, kompozisyon, özet, çeviri, kod, rapor gibi bir metin yazmamı isterse LÜTFEN görsel aracını ASLA kullanma; onun yerine düzgün, kapsamlı bir Türkçe metin cevabı ver.';
 
   const historyParts = [];
   const history = messagesEl.querySelectorAll('.message');
@@ -152,20 +156,20 @@ async function callGemini(prompt) {
       model: MODEL,
       input: inputText,
       system_instruction: system,
-      tools: [
+      tools: forceImage ? [
         {
           type: 'function',
           name: 'generate_image',
-          description: 'Kullanıcı istediğinde bir resim/görsel oluşturur. Görselin İngilizce detaylı açıklamasını prompt olarak verir.',
+          description: 'Kullanıcı istediğinde bir resim/görsel oluşturur. Prompt parametresine Türkçe, detaylı ve sanatsal bir açıklama yaz.',
           parameters: {
             type: 'OBJECT',
             properties: {
-              prompt: { type: 'STRING', description: 'Görselin detaylı İngilizce açıklaması' }
+              prompt: { type: 'STRING', description: 'Görselin Türkçe detaylı açıklaması' }
             },
             required: ['prompt']
           }
         }
-      ]
+      ] : undefined
     })
   });
 
@@ -182,8 +186,8 @@ async function callGemini(prompt) {
 }
 
 // Araclari + metni birlikte yonetir
-async function handleInteraction(prompt, typingEl) {
-  const data = await callGemini(prompt);
+async function handleInteraction(prompt, typingEl, forceImage) {
+  const data = await callGemini(prompt, forceImage);
 
   // Araç çağrısı var mı kontrol et
   let imagePrompt = null;
@@ -196,11 +200,21 @@ async function handleInteraction(prompt, typingEl) {
 
   if (imagePrompt) {
     // Asistan aracı çağırdı - görseli üret ve göster
+    // Ayrıca modelin varsa Türkçe açıklamasını da gösterelim
+    let modelText = '';
+    if (Array.isArray(data.steps)) {
+      const modelOut = data.steps.find((s) => s.type === 'model_output');
+      if (modelOut && Array.isArray(modelOut.content)) {
+        const tp = modelOut.content.filter((c) => c.type === 'text').map((c) => c.text);
+        if (tp.length) modelText = tp.join('\n');
+      }
+    }
     typingEl.remove();
     const genEl = addMessage('🖼️ Görsel oluşturuluyor...', 'bot');
     genEl.classList.add('typing');
     try {
       const imgUrl = 'https://image.pollinations.ai/prompt/' + encodeURIComponent(imagePrompt) + '?width=768&height=768&nologo=true&model=flux';
+      if (modelText) addMessage(modelText, 'bot');
       addImageMessage(imgUrl, imagePrompt);
       genEl.remove();
     } catch (e) {
