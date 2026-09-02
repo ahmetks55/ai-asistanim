@@ -1,28 +1,25 @@
 # 🤖 AI Asistanım
 
-Tamamen ücretsiz çalışan, web tabanlı AI asistanı. Google Gemini ücretsiz API'sini kullanır ve GitHub Pages üzerinde ücretsiz barındırılır.
+Tamamen ücretsiz, **hesap ve API anahtarı gerektirmeyen** web tabanlı AI asistanı. GitHub Pages üzerinde ücretsiz barındırılır.
 
 ## Özellikler
-- 💬 Sohbet arayüzü
-- 🆓 Ücretsiz Google Gemini API kullanımı
+- 💬 Sohbet arayüzü (yazma, kod, çeviri, özet)
+- 🆓 Hesap / API anahtarı / ödeme **gerektirmez**
 - 📱 Mobil uyumlu tasarım
-- 🔑 Anahtarınız tarayıcınızda saklanır (sadece siz görürsünüz)
+- ⚡ Anında çalışır
 
-## Kurulum
+## Nasıl Çalışır
+- [Pollinations.ai](https://pollinations.ai) ücretsiz API'sini kullanır
+- Kullanıcıdan hiçbir anahtar istemez
+- GitHub Pages'de ücretsiz barındırılır
 
-### 1. Ücretsiz API Anahtarı Alın
-1. [Google AI Studio](https://aistudio.google.com/apikey) adresine gidin
-2. Google hesabınızla giriş yapın
-3. "Create API key" butonuna tıklayın
-4. `AIza...` ile başlayan anahtarı kopyalayın
-
-### 2. Siteyi Kullanın
-- `index.html` dosyasını tarayıcıda açın veya GitHub Pages'de barındırın
-- API anahtarınızı girin ve sohbete başlayın
+## Kullanım
+Doğrudan tarayıcıda açın ve sohbet edin:
+`https://ahmetks55.github.io/ai-asistanim/`
 
 ## Teknolojiler
 - HTML / CSS / JavaScript
-- Google Gemini API
+- Pollinations API
 - GitHub Pages (ücretsiz hosting)
 
 ## Lisans

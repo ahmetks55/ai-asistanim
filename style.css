@@ -42,6 +42,17 @@ header h1 {
   font-size: 0.9rem;
 }
 
+.notice {
+  background: #e8f5e9;
+  border: 1px solid #a5d6a7;
+  color: #2e7d32;
+  padding: 12px 15px;
+  border-radius: 10px;
+  margin-bottom: 15px;
+  font-size: 0.95rem;
+  text-align: center;
+}
+
 .settings {
   display: flex;
   flex-wrap: wrap;
