@@ -184,21 +184,26 @@ function makeSlideshowVideo(scenes) {
 // 3) Kod çalıştırma - tarayıcıda güvenli JS sandbox
 function runCodeSnippet(code) {
   return new Promise((resolve) => {
-    const out = [];
     try {
-      // Basit güvenli sandbox: kullanıcı tarafından üretilen kodu çalıştır
-      const fn = new Function('output', `
-        (function(){
-          try {
-            const originalLog = console.log;
-            const logs = [];
-            window.__captureLog = (x)=>{ logs.push(typeof x === 'string' ? x : JSON.stringify(x)); };
-            ${code}
-            return logs.join('\\n');
-          } catch(e){ throw e; }
-        })()
-      `);
-      resolve(String(fn()) || 'Kod çalıştı, çıktı yok.');
+      const logs = [];
+      const origLog = console.log;
+      const origError = console.error;
+      const origWarn = console.warn;
+      console.log = (...a) => logs.push(a.map((x) => (typeof x === 'string' ? x : JSON.stringify(x))).join(' '));
+      console.error = console.log;
+      console.warn = console.log;
+      let ret;
+      try {
+        ret = new Function(code)();
+      } catch (e) {
+        logs.push('⚠️ Kod hatası: ' + e.message);
+      }
+      console.log = origLog;
+      console.error = origError;
+      console.warn = origWarn;
+      // Dönen değer varsa ekle
+      if (ret !== undefined && logs.length === 0) logs.push(String(ret));
+      resolve(logs.length ? logs.join('\n') : 'Kod çalıştı, çıktı yok.');
     } catch (e) {
       resolve('⚠️ Kod hatası: ' + e.message);
     }
@@ -325,6 +330,15 @@ async function sendMessage() {
     ? TOOLS
     : TOOLS.filter((t) => t.name !== 'generate_image');
 
+  // --- ARAÇLARI GEMİNİ'SIZ, SINIRSIZ ÇALIŞTIR ---
+  // Net bir araç komutu verildiyse Gemini'ye hiç uğramadan tarayıcıda halleder.
+  const handled = await tryDirectTool(text, typingEl);
+  if (handled) {
+    sendBtn.disabled = false;
+    userInput.focus();
+    return;
+  }
+
   try {
     await handleInteraction(text, typingEl, allowedTools);
   } catch (err) {
@@ -449,3 +463,85 @@ async function handleInteraction(prompt, typingEl, allowedTools) {
 
 // Initialize
 loadSavedKey();
+
+// ------------------------------------------------
+// ARAÇLARI GEMİNİ'SIZ, SINIRSIZ ÇALIŞTIR
+// Net bir araç komutu verildiğinde Gemini'ye hiç uğramadan tarayıcıda halleder.
+// Böylece kota yalnızca gerçek sohbet/zeka isteklerine harcanır.
+// ------------------------------------------------
+async function tryDirectTool(text, typingEl) {
+  const t = text.toLowerCase();
+
+  // GÖRSEL ÜRETİMİ (net istek)
+  const imageKW = /(bir\s+)?(resim|görsel|gorsel|fotoğraf|fotograf|çiz|çizim|logo)/i;
+  if (imageKW.test(t)) {
+    typingEl.remove();
+    const prompt = text.replace(/lütfen|lutfen|bana|bir\s+görsel|gorsel|resim|fotoğraf|fotograf|çiz\/?|çizim|yap|oluştur|olustur|göster|goster|ver|üret|uret|sağla|sagla|teşekkürler|tesekkurler/gi, '').trim();
+    const cleanPrompt = prompt || 'Detaylı güzel bir resim';
+    const genEl = addMessage('🖼️ Görsel oluşturuluyor (sınırsız, ücretsiz)...', 'bot');
+    genEl.classList.add('typing');
+    const imgUrl = 'https://image.pollinations.ai/prompt/' + encodeURIComponent(cleanPrompt) + '?width=768&height=768&nologo=true&model=flux';
+    addImageMessage(imgUrl, cleanPrompt);
+    genEl.remove();
+    return true;
+  }
+
+  // SESLİ OKUMA (TTS)
+  if (/(sesli|seslendir|oku\b|konuş|konus|dinle|sesle\s+anlat|anlat.*sesli|text.*to.*speech|tts)/i.test(t)) {
+    typingEl.remove();
+    addMessage('🔊 Türkçe seslendiriliyor (sınırsız, ücretsiz)...', 'bot');
+    const speechText = text.replace(/(lütfen|lutfen|bunu|şunu|sunu|şu|su|metni|sesli|seslendir|oku|konuş|konus|dinle|yap|olarak|okuyabilir\s+misin|okur\s+musun)/gi, '').trim() || 'Merhaba, ben sizin ücretsiz AI asistanınızım.';
+    await runTTS(speechText);
+    addMessage('🔊 Seslendirme tamamlandı.', 'bot');
+    return true;
+  }
+
+  // KOD ÇALIŞTIRMA (net istek)
+  if (/(kod\s+yaz|kod\s+çalıştır|kod\s+calistir|bir\s+kod|js\s+kod|javascript|kodu\s+çalıştır|kodu\s+calistir|çalıştır\s+şu|run\s+code)/i.test(t) || /(kaç\s+eder|kaçtır|kactir|hesapla|hesaplayıver)\b/i.test(t)) {
+    typingEl.remove();
+    addMessage('💻 Kod tarayıcıda çalıştırılıyor (sınırsız)...', 'bot');
+    // Gömülü kod bloğu var mı?
+    const codeMatch = text.match(/```(?:js|javascript)?\s*\n?([\s\S]*?)\n?```/);
+    let codeText = codeMatch ? codeMatch[1].trim() : text;
+    // "7 kere 8 hesapla" gibi doğal dil aritmetiğini JS'e çevir
+    const trNum = { 'bir':1,'iki':2,'üç':3,'uc':3,'dört':4,'dort':4,'beş':5,'bes':5,'altı':6,'alti':6,'yedi':7,'sekiz':8,'dokuz':9,'on':10 };
+    const trMap = (s) => s.replace(/\b(kere|çarpı|carp|ile|çarpılmış|carpilmis)\b/gi, '*').replace(/\b(artı|arti|toplam|topla)\b/gi, '+').replace(/\b(eksi|çıkar|cikar)\b/gi, '-').replace(/\b(bölü|bolu|böl)\b/gi, '/');
+    // Türkçe sayı sözcüklerini rakama çevir
+    let cleaned = trMap(codeText).replace(/[^0-9+\-*/().\s]/g, ' ').trim().replace(/\s+/g, ' ');
+    if (/^[\d+\-*/().\s]+$/.test(cleaned)) {
+      try { cleaned = String(eval(cleaned)); }
+      catch (e) { cleaned = null; }
+      if (cleaned !== null) { addMessage('**Sonuç:** ' + cleaned, 'bot'); return true; }
+    }
+    const output = await runCodeSnippet(codeText);
+    addMessage('**Kod çıktısı:**\n```\n' + output + '\n```', 'bot');
+    return true;
+  }
+
+  // WEB ARAMA (net istek)
+  if (/(internette\s+ara|web'de\s+ara|webde\s+ara|internet\s+ara|ara\s+şu|ara\s+su|şunu\s+ara|su\s+ara|hakkında\s+ara|hakkinda\s+ara|google'da\s+ara|güncel\s+bilgi|guncel\s+bilgi|web\s+araması|dunyadaki\s+en)/i.test(t)) {
+    typingEl.remove();
+    addMessage('🔍 Web araması yapılıyor (sınırsız)...', 'bot');
+    const query = text.replace(/(lütfen|lutfen|internette|web'de|webde|internet|google'da|ara|şunu|suyu|sunu|hakkında|hakkinda|bir\s+şey|güncel|guncel|bilgi|web\s+araması)\s*yap?/gi, '').trim();
+    const result = await webSearch(query || text);
+    addMessage('**Arama sonucu:** ' + result, 'bot');
+    return true;
+  }
+
+  // VİDEO/SLAYT (net istek)
+  if (/(video\s+yap|video\s+üret|video\s+uret|slayt|video\s+göster|video\s+goster|animasyonlu|anlatım\s+videosu|anlatim\s+videosu|bunu\s+video|kısa\s+video|kisa\s+video|konu\s+anlatım\s+videosu)/i.test(t)) {
+    typingEl.remove();
+    addMessage('🎬 Video/Slayt hazırlanıyor (sınırsız)...', 'bot');
+    // Konuyu çıkar, basit birkaç slayta böl
+    const topic = text.replace(/(lütfen|lutfen|bana|bir|video|slayt|göster|goster|yap|üret|uret|anlatım|anlatim|oluştur|olustur|konu)\s*/gi, '').trim() || 'Genel anlatım';
+    const scenes = [
+      { title: 'Giriş', text: 'Merhaba! Bugün size "' + topic + '" konusunu anlatacağım.', color: '#667eea' },
+      { title: 'Ana Konu', text: 'Bu konunun en önemli noktalarına birlikte bakalım.', color: '#764ba2' },
+      { title: 'Özet', text: 'Umarım bu kısa anlatım işinize yarar. Teşekkürler!', color: '#11998e' }
+    ];
+    makeSlideshowVideo(scenes);
+    return true;
+  }
+
+  return false;
+}
