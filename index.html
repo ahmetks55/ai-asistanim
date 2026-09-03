@@ -17,8 +17,9 @@
       <div class="mode-select">
         <label>AI Modu:</label>
         <select id="aiMode">
-          <option value="local">Yerel AI (Ollama — sınırsız, bedava)</option>
-          <option value="cloud">Bulut (Gemini — API anahtarı)</option>
+          <option value="bridge" selected>🏭 Yapay Şirket (Köprü)</option>
+          <option value="local" disabled>Yerel AI (Ollama — devre dışı)</option>
+          <option value="cloud" disabled>Bulut (Gemini — devre dışı)</option>
         </select>
         <span id="localStatus" class="status"></span>
       </div>

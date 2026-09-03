@@ -25,12 +25,20 @@ function loadSavedKey() {
     keyStatus.classList.remove('error');
   }
   // Mod tercihini yükle
-  const mode = localStorage.getItem('ai_mode') || 'local';
+  const mode = localStorage.getItem('ai_mode') || 'bridge';
   aiMode.value = mode;
   applyMode(mode);
 }
 
 function applyMode(mode) {
+  // Köprü modu öncelikli: Ollama + Gemini devre dışı, köprüye bağlan
+  if (mode === 'bridge') {
+    cloudFields.style.display = 'none';
+    noticeLocal.style.display = 'none';
+    noticeCloud.style.display = 'block';
+    checkBridge();
+    return;
+  }
   if (mode === 'cloud') {
     cloudFields.style.display = 'flex';
     noticeLocal.style.display = 'block';
@@ -41,6 +49,27 @@ function applyMode(mode) {
     noticeLocal.style.display = 'none';
     noticeCloud.style.display = 'block';
     checkLocalOllama();
+  }
+}
+
+async function checkBridge() {
+  localStatus.textContent = '🔍 Köprü kontrol ediliyor...';
+  localStatus.classList.remove('error', 'ok');
+  try {
+    const ctrl = new AbortController();
+    const to = setTimeout(() => ctrl.abort(), 4000);
+    const res = await fetch('http://localhost:8788/health', { signal: ctrl.signal });
+    clearTimeout(to);
+    if (res.ok) {
+      localStatus.textContent = '✓ Köprü bağlı — görev hazır';
+      localStatus.classList.add('ok');
+    } else {
+      localStatus.textContent = '⚠️ Köprü çalışmıyor (bridge-server açık mı?)';
+      localStatus.classList.add('error');
+    }
+  } catch (e) {
+    localStatus.textContent = '⚠️ Köprü bulunamadı — bridge-server başlatın';
+    localStatus.classList.add('error');
   }
 }
 
@@ -365,6 +394,7 @@ async function sendMessage() {
       return;
     }
   }
+  // Köprü modunda anahtarsız ilerle (Ollama+Gemini devre dışı)
 
   addMessage(text, 'user');
   userInput.value = '';
@@ -393,7 +423,10 @@ async function sendMessage() {
   }
 
   try {
-    if (getMode() === 'local') {
+    if (getMode() === 'bridge') {
+      typingEl.remove();
+      await handleBridgeTask(text);
+    } else if (getMode() === 'local') {
       await handleLocalChat(text, typingEl);
     } else {
       await handleInteraction(text, typingEl, allowedTools);
@@ -525,7 +558,7 @@ loadSavedKey();
 // YEREL AI (OLLAMA) — anahtarsız, sınırsız sohbet
 // ------------------------------------------------
 function getMode() {
-  return aiMode.value === 'cloud' ? 'cloud' : 'local';
+  return aiMode.value === 'cloud' ? 'cloud' : (aiMode.value === 'bridge' ? 'bridge' : 'local');
 }
 
 // Sohbet geçmişini Ollama formatına çevir
@@ -645,4 +678,45 @@ async function tryDirectTool(text, typingEl) {
   }
 
   return false;
+}
+
+// ------------------------------------------------
+// KÖPRÜ (YAPAY ŞİRKET) — görevi bu makinedeki bridge-server'a gönderir
+// Görev anlaşılır, araçlar çalışır, hazır dosyalar döner.
+// ------------------------------------------------
+async function handleBridgeTask(task) {
+  const genEl = addMessage('🏭 Görev köprüye gönderiliyor (Yapay Şirket çalışıyor)...', 'bot');
+  genEl.classList.add('typing');
+  let res;
+  try {
+    res = await fetch('http://localhost:8788/run', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ task: task })
+    });
+  } catch (e) {
+    genEl.remove();
+    addMessage('⚠️ Köprüye bağlanılamadı. Kodu bu makinede çalıştırın:\n```\nnode "C:\\Users\\ASUS\\ai-web-tool\\bridge-server.js"\n```', 'bot');
+    return;
+  }
+  if (!res.ok) {
+    genEl.remove();
+    addMessage('⚠️ Köprü hatası (' + res.status + ')', 'bot');
+    return;
+  }
+  const data = await res.json();
+  genEl.remove();
+  let out = '🏭 **Görev tamamlandı** — ' + data.task + '\n\n**Planlanan adımlar:** ' + (data.steps || []).join(', ') + '\n\n**Üretilenler:**\n';
+  (data.results || []).forEach((r) => {
+    if (r.file) {
+      out += '- **' + r.type + ':** ' + r.file + '\n';
+    } else if (r.content) {
+      out += '- **' + r.type + ' metni:** ' + r.content + '\n';
+    } else if (r.note) {
+      out += '- **' + r.type + ':** ' + r.note + '\n';
+    } else if (r.error) {
+      out += '- **' + r.type + ':** hata (' + r.error + ')\n';
+    }
+  });
+  addMessage(out, 'bot');
 }
