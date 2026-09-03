@@ -543,13 +543,14 @@ function getLocalHistory(prompt) {
 }
 
 async function handleLocalChat(prompt, typingEl) {
-  const model = 'qwen2.5:1.5b';
+  const model = 'qwen2.5:0.5b';
   const res = await fetch('http://localhost:11434/api/chat', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       model: model,
       stream: false,
+      options: { num_ctx: 512, temperature: 0.7 },
       messages: getLocalHistory(prompt)
     })
   });
