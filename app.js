@@ -356,7 +356,8 @@ async function sendMessage() {
   const text = userInput.value.trim();
   if (!text) return;
 
-  if (!apiKey) {
+  const mode = getMode();
+  if (mode === 'cloud' && !apiKey) {
     apiKey = apiKeyInput.value.trim();
     if (!apiKey) {
       keyStatus.textContent = 'Önce API anahtarını girin!';
