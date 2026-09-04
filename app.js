@@ -10,6 +10,25 @@ const cloudFields = document.getElementById('cloudFields');
 const noticeLocal = document.getElementById('noticeLocal');
 const noticeCloud = document.getElementById('noticeCloud');
 const localStatus = document.getElementById('localStatus');
+const zoomOutBtn = document.getElementById('zoomOut');
+const zoomInBtn = document.getElementById('zoomIn');
+const zoomValEl = document.getElementById('zoomVal');
+
+// Site geneli uzaklaştır/yakınlaştır (tarayıcı zoom'unu kullanamayan ortamlar için)
+(function initZoom() {
+  const container = document.querySelector('.container');
+  if (!container || !zoomOutBtn || !zoomInBtn || !zoomValEl) return;
+  let zoom = parseInt(localStorage.getItem('site_zoom') || '100', 10) || 100;
+  zoom = Math.max(50, Math.min(150, zoom));
+  function applyZoom() {
+    container.style.zoom = String(zoom / 100);
+    zoomValEl.textContent = '%' + zoom;
+    localStorage.setItem('site_zoom', String(zoom));
+  }
+  zoomOutBtn.addEventListener('click', () => { zoom = Math.max(50, zoom - 10); applyZoom(); });
+  zoomInBtn.addEventListener('click', () => { zoom = Math.min(150, zoom + 10); applyZoom(); });
+  applyZoom();
+})();
 
 const MODEL = 'gemini-3.5-flash';
 let apiKey = '';
