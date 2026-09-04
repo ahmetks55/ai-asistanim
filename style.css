@@ -196,30 +196,41 @@ header h1 {
 }
 
 .message {
-  margin-bottom: 10px;
-  padding: 10px 13px;
-  border-radius: 12px;
-  max-width: min(62%, 480px);
-  line-height: 1.5;
+  margin-bottom: 14px;
+  padding: 0;
+  border-radius: 0;
+  max-width: 100%;
+  line-height: 1.55;
   animation: fadeIn 0.3s ease;
+  overflow-wrap: anywhere;
 }
 
 .message.bot {
-  background: white;
-  border: 1px solid #e0e0e0;
-  align-self: flex-start;
+  background: transparent;
+  border: none;
+  align-self: stretch;
 }
 
 .message.user {
-  background: #667eea;
-  color: white;
-  align-self: flex-end;
-  margin-left: auto;
+  background: transparent;
+  color: inherit;
+  margin-left: 0;
+  align-self: stretch;
 }
 
 .message strong {
   display: block;
-  margin-bottom: 4px;
+  font-size: 12px;
+  margin-bottom: 2px;
+  letter-spacing: 0.3px;
+}
+
+.message.bot strong {
+  color: #667eea;
+}
+
+.message.user strong {
+  color: #476282;
 }
 
 .generated-image {
