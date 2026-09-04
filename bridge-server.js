@@ -131,9 +131,19 @@ function runAdmin(task, cb) {
 // ---------------------------------------------------------------
 
 // Görsel üretimi (Pollinations) — doğrulama: dosya > 1KB olmalı, boşsa 1 kez daha dener.
+// Prompt: komut/dolgu kelimeler TAM KELİME olarak temizlenir (harf değil), betimleme korunur.
+const IMAGE_STOP = /^(?:lütfen|lutfen|bana|bir|resm\w*|görsel\w*|gorsel\w*|fotoğraf\w*|fotograf\w*|çiz(?!g)\w*|yap\w*|oluştur\w*|olustur\w*|göster\w*|goster\w*|üret\w*|uret\w*|sağla\w*|sagla\w*|ver\w*|teşekkürler|tesekkurler|istersen|rica\s+\w*)$/iu;
+function cleanImagePrompt(raw) {
+  const s = String(raw || '').trim().replace(/[.,;:!?'"”’()[\]{}]+$/g, '');
+  const kept = s.split(/\s+/).filter((w) => w && !IMAGE_STOP.test(w));
+  const out = kept.join(' ').trim();
+  return out || s;
+}
 function imageFromPrompt(prompt, cb, attempt) {
+  const clean = cleanImagePrompt(prompt);
+  console.log('[görsel] istenen:', JSON.stringify(String(prompt)), '-> flux prompt:', JSON.stringify(clean));
   attempt = attempt || 0;
-  const url = 'https://image.pollinations.ai/prompt/' + encodeURIComponent(String(prompt).slice(0, 300)) + '?width=768&height=768&nologo=true&model=flux';
+  const url = 'https://image.pollinations.ai/prompt/' + encodeURIComponent(clean.slice(0, 300)) + '?width=768&height=768&nologo=true&model=flux';
   const file = path.join(OUTDIR, uniq('gorsel') + '.jpg');
   const req = https.get(url, { timeout: 25000 }, (r) => {
     if (r.statusCode >= 400) {
