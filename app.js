@@ -773,9 +773,12 @@ async function handleBridgeTask(task, typingEl) {
   typingEl.textContent = '🏭 Yönetici görevi planlıyor...';
   let res;
   try {
+    const hdrs = { 'Content-Type': 'application/json' };
+    const adminTok = localStorage.getItem('adminToken');
+    if (adminTok) hdrs['x-admin-token'] = adminTok;
     res = await fetch('http://localhost:8788/run', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: hdrs,
       body: JSON.stringify({ task: task, context: lastBotText() })
     });
   } catch (e) {
@@ -836,6 +839,8 @@ async function handleBridgeTask(task, typingEl) {
       addMessage('**Kod çıktısı:**\n```\n' + output + '\n```', 'bot');
     } else if (r.type === 'search') {
       addMessage('🔍 **Arama sonucu:**\n' + (r.text || r.error || ''), 'bot');
+    } else if (r.type === 'admin') {
+      addMessage('🧠 **Yönetici (admin CLI) çıktısı:**\n' + (r.text || ''), 'bot');
     } else if (r.error) {
       addMessage('⚠️ **' + r.type + ' hatası:** ' + r.error, 'bot');
     }

@@ -6,6 +6,7 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 const https = require('https');
+const { execFile } = require('child_process');
 
 const PORT = 8788;
 const OUTDIR = path.join(__dirname, 'bridge_output');
@@ -73,6 +74,56 @@ function uniq(prefix) {
 
 function fileUrl(fname) {
   return 'http://localhost:' + PORT + '/goruntu/' + encodeURIComponent(fname);
+}
+
+// ---------------------------------------------------------------
+// YÖNETİCİ KANCASI (opencode admin) — isteğe bağlı ayrı CLI yöneticisi
+// Görevi köprünün/anahların çözemediği işlerde bu komuta devreder.
+// Yapılandırma (repo yanında bridge_admin.json, gitignore'lu) ya da OPENCODE_ADMIN ortam değişkeni:
+//   { "admin": ["opencode","run","--format","json"], "timeoutMs": 120000, "clientToken": "" }
+//   - admin: çalıştırılacak CLI ve sabit argümanları; görev metni son argüman olarak eklenir
+//   - clientToken: doluysa /run isteği "x-admin-token" başlığında aynı değeri taşımalı
+//   - çıktı JSON {results:[...]} beklenir; değilse ham metin "admin" sonucu olarak döner
+// Ayarlı değilse önceki davranış aynen korunur (beyne devret).
+// ---------------------------------------------------------------
+function loadAdminConfig() {
+  const cfg = { admin: null, timeoutMs: 120000, clientToken: '' };
+  const cfgFile = path.join(__dirname, 'bridge_admin.json');
+  try {
+    if (fs.existsSync(cfgFile)) {
+      const raw = fs.readFileSync(cfgFile, 'utf8').replace(/^\uFEFF/, '');
+      const parsed = JSON.parse(raw);
+      if (parsed.admin) cfg.admin = parsed.admin;
+      if (parsed.timeoutMs) cfg.timeoutMs = parsed.timeoutMs;
+      if (parsed.clientToken) cfg.clientToken = String(parsed.clientToken);
+    }
+  } catch (e) {
+    console.log('Admin yapılandırması okunamadı:', e.message);
+  }
+  if (process.env.OPENCODE_ADMIN) cfg.admin = process.env.OPENCODE_ADMIN;
+  if (typeof cfg.admin === 'string' && cfg.admin.trim()) cfg.admin = cfg.admin.split(/\s+/).filter(Boolean);
+  if (!Array.isArray(cfg.admin)) cfg.admin = null;
+  return cfg;
+}
+const ADMIN = loadAdminConfig();
+
+// Yönetici CLI'yı çalıştır; başarı + boş olmayan çıktı yoksa null (beyne düşer).
+function runAdmin(task, cb) {
+  if (!ADMIN.admin) return cb(null, null);
+  const args = ADMIN.admin.concat(String(task));
+  // 'node' PATH'te olmayabilir; kesin yol kullan
+  const cmd = (args[0] === 'node' || args[0] === 'node.exe') ? process.execPath : args[0];
+  execFile(cmd, args.slice(1), {
+    timeout: ADMIN.timeoutMs,
+    encoding: 'utf8',
+    maxBuffer: 2 * 1024 * 1024
+  }, (err, stdout) => {
+    if (err) { console.log('Yönetici kancası hatası:', err.message); }
+    if (err || !stdout || !stdout.trim()) return cb(null, null);
+    let parsed = null;
+    try { parsed = JSON.parse(stdout); } catch (e) { parsed = null; }
+    cb(null, parsed || { text: stdout.trim() });
+  });
 }
 
 // ---------------------------------------------------------------
@@ -344,7 +395,7 @@ const server = http.createServer((req, res) => {
   }
   if (req.method === 'OPTIONS') return send(res, 204, {}, origin);
   if (req.method === 'GET' && req.url === '/health') return send(res, 200, { ok: true, tool: 'yönetici-köprü' }, origin);
-  if (req.method === 'GET' && req.url === '/models') return send(res, 200, { tools: ['image', 'scenes', 'speak', 'run_code', 'result', 'search'] }, origin);
+  if (req.method === 'GET' && req.url === '/models') return send(res, 200, { tools: ['image', 'scenes', 'speak', 'run_code', 'result', 'search'], admin: !!ADMIN.admin }, origin);
 
   // Görsel/metin dosyasını tarayıcıya servis et: /goruntu/gorsel_123.jpg
   if (req.method === 'GET' && req.url.startsWith('/goruntu/')) {
@@ -372,13 +423,31 @@ const server = http.createServer((req, res) => {
       if (!task) return send(res, 400, { error: 'Görev boş' }, origin);
       const plan = makePlan(task, context);
       if (!plan.length) {
-        return send(res, 200, {
+        const needs = {
           task,
           status: 'needs_brain',
           plan: [],
           results: [],
           reason: 'Yönetici bu görevi ücretsiz araçlara yönlendiremedi; sohbet beyni (Gemini) gerekiyor.'
-        }, origin);
+        };
+        // İsteğe bağlı yönetici kancası: CLI yönetici ayarlıysa ona devret
+        const adminOk = !ADMIN.clientToken || req.headers['x-admin-token'] === ADMIN.clientToken;
+        if (ADMIN.admin && adminOk) {
+          return runAdmin(task, (adErr, adminOut) => {
+            if (adErr || !adminOut) return send(res, 200, needs, origin);
+            const results = Array.isArray(adminOut.results)
+              ? adminOut.results
+              : [{ type: 'admin', text: adminOut.text || '' }];
+            return send(res, 200, {
+              task,
+              status: 'done',
+              plan: ['admin'],
+              results,
+              reason: 'Yönetici kancası üretti'
+            }, origin);
+          });
+        }
+        return send(res, 200, needs, origin);
       }
       runPlan(plan, (results) => {
         send(res, 200, { task, status: 'done', plan: plan.map((p) => p.type), results }, origin);

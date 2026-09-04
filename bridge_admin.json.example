@@ -1,0 +1,5 @@
+{
+  "admin": ["opencode", "run", "--format", "json"],
+  "timeoutMs": 120000,
+  "clientToken": ""
+}

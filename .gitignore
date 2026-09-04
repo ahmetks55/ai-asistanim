@@ -1,3 +1,4 @@
 bridge_output/
 node_modules/
 .DS_Store
+bridge_admin.json
