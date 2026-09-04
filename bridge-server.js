@@ -415,7 +415,7 @@ function makePlan(task, context) {
     return plan;
   }
   // 2) Görsel — Türkçe çekim eklerine dayanıklı kök eşleşmesi (resmi/resmin/resimler…)
-  if (/(resm\w*|resim\w*|görsel\w*|gorsel\w*|foto\w*|karikat(ü|u)r\w*|çiz(im|er)\w*|logo\w*|manzara\w*|poster\w*|afiş\w*|afis\w*|ill(ü|u)strasyon)/iu.test(t)) {
+  if (/(resm\w*|resim\w*|görsel\w*|gorsel\w*|foto\w*|karikat(ü|u)r\w*|çiz\w*|boya\w*|logo\w*|manzara\w*|poster\w*|afiş\w*|afis\w*|ill(ü|u)strasyon)/iu.test(t)) {
     // Prompt: kelimeleri kesme; ham görev metnini olduğu gibi modele ver (flux doğal dili çözer).
     plan.push({ type: 'image', prompt: String(subject === task ? task : subject).trim() });
   }
