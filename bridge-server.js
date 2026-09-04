@@ -292,9 +292,22 @@ function splitScenes(subject, max) {
   const raw = String(subject || '').trim();
   const parts = raw.split(/\n+/).map((s) => s.trim()).filter(Boolean);
   let sentences = parts.length > 1 ? parts : raw.split(/(?<=[.!?])\s+/).map((s) => s.trim()).filter(Boolean);
-  if (!sentences.length) sentences = ['İçerik bulunamadı, genel bir anlatım yapıyorum.'];
+  if (sentences.length === 1) {
+    // Tek cümle: virgül / "ve" sınırlarından böl (tek parça kalmasın)
+    const clauses = sentences[0].split(/\s*,\s*|\s+ve\s+|\s+veya\s+/).map((s) => s.trim()).filter(Boolean);
+    if (clauses.length > 1) sentences = clauses;
+  }
+  if (sentences.length === 1) {
+    // Hâlâ tek parça: başlangıç-gelişme-özet mini anlatım kur
+    const main = sentences[0];
+    sentences = [
+      'Giriş: ' + main,
+      'Şimdi bu konunun öne çıkan noktalarını birlikte inceleyelim.',
+      'Özet: ' + main.slice(0, 100)
+    ];
+  }
   sentences = sentences.slice(0, max).map((s) => (s.length > 140 ? s.slice(0, 137) + '...' : s));
-  const titles = ['Giriş', 'Ana Konu', 'Devam', 'Sonuç'];
+  const titles = ['Giriş', 'Ana Konu', 'Gelişme', 'Sonuç'];
   return sentences.map((s, idx) => ({ title: titles[idx] || 'Bölüm ' + (idx + 1), text: s }));
 }
 

@@ -195,93 +195,161 @@ function runTTS(text) {
   });
 }
 
-// 2) Slayt Video üretimi - canvas + TTS + animasyon (ücretsiz)
+// 2) Slayt Video üretimi — görsel kartlar (her zaman görünür) + TTS anlatım + kontroller
 function makeSlideshowVideo(scenes) {
-  // scenes: [{title, text, color, image?}] dizisi — image varsa arkaplan görseli kullanılır
+  // scenes: [{title, text, image?}] — her sahne: görsel kartı + metin; Oynat ile anlatımlı geçiş
   if (!Array.isArray(scenes) || scenes.length === 0) return false;
   const holder = document.createElement('div');
   holder.className = 'slideshow-holder';
-  messagesEl.appendChild(holder);
-  holder.scrollIntoView();
 
-  const canvas = document.createElement('canvas');
-  canvas.width = 800;
-  canvas.height = 450;
-  canvas.className = 'video-canvas';
-  holder.appendChild(canvas);
-  const ctx = canvas.getContext('2d');
+  const cardsEl = document.createElement('div');
+  cardsEl.className = 'slide-cards';
+  const cards = [];
+  scenes.forEach((s) => {
+    const card = document.createElement('div');
+    card.className = 'slide-card';
+    const img = document.createElement('img');
+    img.className = 'slide-img';
+    img.alt = s.title || 'Sahne';
+    if (s.image) {
+      img.src = s.image;
+      img.onerror = () => { img.style.display = 'none'; card.classList.add('no-img'); };
+    } else {
+      img.style.display = 'none';
+    }
+    const body = document.createElement('div');
+    body.className = 'slide-body';
+    const title = document.createElement('div');
+    title.className = 'slide-title';
+    title.textContent = s.title || 'Sahne';
+    const desc = document.createElement('div');
+    desc.className = 'slide-desc';
+    desc.textContent = s.text || '';
+    body.appendChild(title);
+    body.appendChild(desc);
+    card.appendChild(img);
+    card.appendChild(body);
+    cardsEl.appendChild(card);
+    cards.push({ card, s });
+  });
+  holder.appendChild(cardsEl);
 
-  const playBtn = document.createElement('button');
-  playBtn.textContent = '▶ Başlat';
-  playBtn.className = 'video-btn';
-  holder.appendChild(playBtn);
+  const controls = document.createElement('div');
+  controls.className = 'slideshow-controls';
+  const btnToggle = document.createElement('button');
+  btnToggle.className = 'video-btn';
+  btnToggle.textContent = '▶ Anlatımlı Oynat';
+  const btnNext = document.createElement('button');
+  btnNext.className = 'video-btn';
+  btnNext.textContent = '⏭ Sonraki';
+  const btnStop = document.createElement('button');
+  btnStop.className = 'video-btn';
+  btnStop.textContent = '⏹ Bitir';
+  controls.appendChild(btnToggle);
+  controls.appendChild(btnNext);
+  controls.appendChild(btnStop);
+  holder.appendChild(controls);
 
   const info = document.createElement('div');
   info.className = 'video-info';
   holder.appendChild(info);
 
-  let running = false;
-  const bgImg = {}; // sahne index -> Image
+  messagesEl.appendChild(holder);
+  holder.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 
-  function overlayText(i) {
-    const s = scenes[i];
-    ctx.fillStyle = '#ffffff';
-    ctx.textAlign = 'center';
-    ctx.font = 'bold 40px Segoe UI, sans-serif';
-    ctx.fillText(s.title, canvas.width / 2, canvas.height / 2 - 90);
-    ctx.fillStyle = 'rgba(255,255,255,0.95)';
-    ctx.font = '22px Segoe UI, sans-serif';
-    // Metni kısalt
-    const short = s.text.length > 120 ? s.text.slice(0, 117) + '...' : s.text;
-    ctx.fillText(short, canvas.width / 2, canvas.height / 2 + 10, canvas.width - 60);
+  let current = 0;
+  let playing = false;
+  let paused = false;
+  let seq = 0;
+
+  function setActive(i) {
+    cards.forEach((c, idx) => c.card.classList.toggle('active', idx === i));
+    info.textContent = 'Sahne ' + (i + 1) + '/' + cards.length + ' — ' + (cards[i].s.title || '');
   }
 
-  function drawScene(i) {
-    const s = scenes[i];
-    ctx.fillStyle = '#1a1a2e';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    if (s.image && bgImg[i] && bgImg[i].complete && bgImg[i].naturalWidth > 0) {
-      // Arkaplan görseli + karartma (metin okunur olsun)
-      ctx.drawImage(bgImg[i], 0, 0, canvas.width, canvas.height);
-      ctx.fillStyle = 'rgba(10,10,35,0.45)';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-    } else {
-      ctx.fillStyle = '#1d1d3b';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-    }
-    overlayText(i);
-  }
-
-  // Görsel arkaplanlarını önceden yükle (kaynak: köprü üzerinden doğrulanmış, CORS uyumlu)
-  scenes.forEach((s, i) => {
-    if (!s.image) return;
-    const img = new Image();
-    img.crossOrigin = 'anonymous';
-    img.onload = () => { bgImg[i] = img; drawScene(i); };
-    img.onerror = () => { bgImg[i] = null; drawScene(i); };
-    bgImg[i] = img;
-    img.src = s.image;
-  });
-
-  function runScene(i) {
-    if (i >= scenes.length) { running = false; info.textContent = '✅ Video tamamlandı.'; return; }
-    drawScene(i);
-    info.textContent = '🎵 Anlatım: ' + scenes[i].title;
-    const spoken = scenes[i].text;
-    runTTS(spoken).then(() => {
-      setTimeout(() => runScene(i + 1), 700);
+  // Duraklatma/skip bilincinde konuşma: duraklatıldıysa ilerlemez.
+  function speakText(text) {
+    return new Promise((resolve) => {
+      const finish = () => resolve(true);
+      if (!('speechSynthesis' in window)) { setTimeout(finish, Math.max(2500, String(text).length * 90)); return; }
+      const synth = window.speechSynthesis;
+      synth.cancel();
+      const u = new SpeechSynthesisUtterance(String(text));
+      const voices = synth.getVoices();
+      const tr = voices.find((v) => v.lang && v.lang.toLowerCase().startsWith('tr'));
+      if (tr) u.voice = tr;
+      u.lang = tr ? tr.lang : 'tr-TR';
+      u.rate = 1;
+      u.onend = finish;
+      u.onerror = finish;
+      synth.speak(u);
+      const iv = setInterval(() => {
+        if (paused) return;
+        if (synth.paused) return;
+        if (synth.speaking) return;
+        clearInterval(iv);
+        finish();
+      }, 150);
     });
   }
 
-  playBtn.addEventListener('click', () => {
-    if (!running) {
-      running = true;
-      drawScene(0);
-      runScene(0);
+  function runScene(i) {
+    if (!playing) return;
+    if (i >= cards.length) {
+      playing = false;
+      paused = false;
+      btnToggle.textContent = '▶ Yeniden Oynat';
+      info.textContent = '✅ Anlatım tamamlandı.';
+      return;
+    }
+    const my = ++seq;
+    current = i;
+    setActive(i);
+    speakText(cards[i].s.text || '').then(() => {
+      setTimeout(() => { if (playing && my === seq) runScene(current + 1); }, 600);
+    });
+  }
+
+  function start() {
+    playing = true;
+    paused = false;
+    btnToggle.textContent = '⏸ Duraklat';
+    if (current >= cards.length) current = 0;
+    runScene(current);
+  }
+
+  function stop() {
+    playing = false;
+    paused = false;
+    if (window.speechSynthesis) window.speechSynthesis.cancel();
+    btnToggle.textContent = '▶ Anlatımlı Oynat';
+    info.textContent = "⏹ Durdu. 'Oynat' demek ilk sahneden başlatır.";
+  }
+
+  btnToggle.addEventListener('click', () => {
+    if (playing && !paused) {
+      paused = true;
+      if (window.speechSynthesis) window.speechSynthesis.pause();
+      btnToggle.textContent = '▶ Devam';
+      info.textContent = '⏸ Duraklatıldı.';
+    } else if (playing && paused) {
+      paused = false;
+      if (window.speechSynthesis) window.speechSynthesis.resume();
+      btnToggle.textContent = '⏸ Duraklat';
+      setActive(current);
+    } else {
+      start();
     }
   });
+  btnNext.addEventListener('click', () => {
+    if (!playing) start();
+    if (window.speechSynthesis) window.speechSynthesis.cancel();
+    if (current + 1 < cards.length) runScene(current + 1);
+    else stop();
+  });
+  btnStop.addEventListener('click', stop);
 
-  drawScene(0);
+  setActive(0);
   return true;
 }
 

@@ -217,6 +217,63 @@ header h1 {
   text-align: center;
 }
 
+.slide-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+}
+
+.slide-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: #1c1c3a;
+  border: 2px solid transparent;
+  border-radius: 10px;
+  overflow: hidden;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.slide-card.active {
+  border-color: #28a745;
+  box-shadow: 0 0 12px rgba(40, 167, 69, 0.35);
+}
+
+.slide-img {
+  width: 100%;
+  max-height: 320px;
+  object-fit: cover;
+  border-radius: 8px 8px 0 0;
+  background: #000;
+}
+
+.slide-card.no-img .slide-img {
+  display: none;
+}
+
+.slide-body {
+  padding: 4px 10px 10px;
+}
+
+.slide-title {
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 4px;
+}
+
+.slide-desc {
+  color: #ddd;
+  font-size: 14px;
+}
+
+.slideshow-controls {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
 .message pre {
   background: #1e1e1e;
   color: #f0f0f0;
