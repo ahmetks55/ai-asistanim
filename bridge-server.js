@@ -311,6 +311,69 @@ function splitScenes(subject, max) {
   return sentences.map((s, idx) => ({ title: titles[idx] || 'Bölüm ' + (idx + 1), text: s }));
 }
 
+// Yapılandırılmış hikaye/senaryo metninden sahneleri çıkarır.
+// "N. Senaryo: Başlık" başlıkları raflar; her blokta "Anlatım:" metnini,
+// yoksa "Olay Özeti:" satırını, o da yoksa blok metnini sahne anlatımı yapar.
+// Başlık yapısı yoksa splitScenes'e düşer.
+function parseStoryScenes(subject, max) {
+  max = max || 6;
+  const raw = String(subject || '').replace(/\r\n/g, '\n');
+  const headerRe = /^\s*(?:#{1,6}\s*)?(\d+[.)]?\s*)?\s*(?:senaryo|scenario|sahne|bölüm|bolum)\s*[\d.]*\s*[:.\-–]?\s+(.*)$/i;
+  const labelRe = /^\s*(?:[*>\s]*)?(mekan|karakterler?|olay\s+özeti?|anlatım|anlatim|olay)\s*:\s*(.*)$/i;
+  const blocks = [];
+  let current = null;
+  let sawHeader = false;
+  for (const ln of raw.split('\n')) {
+    const line = ln.trim();
+    if (!line || line === '---' || /^#{1,6}\s*$/.test(line)) continue;
+    const hm = line.match(headerRe);
+    if (hm) {
+      sawHeader = true;
+      if (current) blocks.push(current);
+      current = { title: (hm[2] || 'Sahne ' + (blocks.length + 1)).replace(/[*>`"“”]+/g, '').trim() || ('Sahne ' + (blocks.length + 1)), body: [] };
+      continue;
+    }
+    if (current) current.body.push(line);
+  }
+  if (current) blocks.push(current);
+
+  if (!sawHeader || !blocks.length) return splitScenes(subject, max);
+
+  const scenes = [];
+  for (const b of blocks) {
+    const sections = Object.create(null);
+    let key = null;
+    for (const line of b.body) {
+      const lm = line.match(labelRe);
+      if (lm) {
+        key = lm[1].toLowerCase().replace(/\s+/g, '');
+        if (!sections[key]) sections[key] = [];
+        if (lm[2]) sections[key].push(lm[2]);
+        continue;
+      }
+      if (key && sections[key]) sections[key].push(line.replace(/^[*>\s]+/, '').replace(/["“”«»]+/g, '').trim());
+    }
+    let text = '';
+    const anlatim = sections['anlatım'] || sections['anlatim'];
+    if (anlatim && anlatim.length) {
+      text = anlatim.join(' ').replace(/^["“”]+/, '').replace(/["“”]+$/, '').trim();
+    } else {
+      const ozet = sections['olayözet'] || sections['olayözeti'] || sections['olay'];
+      if (ozet && ozet.length) text = ozet.join(' ').trim();
+    }
+    if (!text) text = b.body.join(' ').replace(/[*#>"“”]/g, '').trim().slice(0, 200);
+    if (text) scenes.push({ title: b.title, text });
+  }
+  if (scenes.length < 2) return splitScenes(subject, max);
+  return scenes.slice(0, max);
+}
+
+// Sahne görseli için kısa, betimleyici prompt
+function scenesPrompt(sc) {
+  return (sc.title + ': ' + sc.text).replace(/\s+/g, ' ').trim().slice(0, 150) +
+    '. Çocuk kitabı illüstrasyonu, yumuşak ışık, sevimli karakterler';
+}
+
 // Yönetici kararı: görevi ücretsiz araç planına çevirir.
 // Kelime sınırları Unicode sınırlı (Türkçe ı/ş/ç için \b güvenilmezdir).
 function makePlan(task, context) {
@@ -324,12 +387,12 @@ function makePlan(task, context) {
     plan.push({ type: 'scenes', subject });
     return plan;
   }
-  // 2) Görsel
-  if (new RegExp(B + '(resim|gorsel|görsel|foto|karikatur|karikatür|logo|manzara|poster|afis|afiş|çizim|çiz)', 'iu').test(t)) {
+  // 2) Görsel — Türkçe çekim eklerine dayanıklı kök eşleşmesi (resmi/resmin/resimler…)
+  if (/(resm\w*|resim\w*|görsel\w*|gorsel\w*|foto\w*|karikat(ü|u)r\w*|çiz(im|er)\w*|logo\w*|manzara\w*|poster\w*|afiş\w*|afis\w*|ill(ü|u)strasyon)/iu.test(t)) {
     plan.push({ type: 'image', prompt: subject === task ? stripPrompt(task) : subject });
   }
-  // 3) Sesli/seslendirme
-  if (new RegExp(B + '(sesli|seslendir|konuş|konus|dinle|sesle|okuy|okur|oku|tts|text\\s*to\\s*speech)', 'iu').test(t)) {
+  // 3) Sesli/seslendirme — kök eşleşmesi (okumak/okuyayım/seslendir/konuşalım…)
+  if (/(seslendir|sesli|okum|okur|okuy|okut|oku(?!l)|konuş\w*|konus\w*|dinle|tts)/iu.test(t)) {
     plan.push({ type: 'speak', text: subject === task ? stripSpeak(task) : subject });
   }
   // 4) Aritmetik / kod
@@ -362,7 +425,7 @@ function runPlan(plan, done) {
         next();
       });
     } else if (step.type === 'scenes') {
-      const scenes = splitScenes(step.subject);
+      const scenes = parseStoryScenes(step.subject, 6);
       let si = 0;
       (function nextScene() {
         if (si >= scenes.length) {
@@ -371,7 +434,7 @@ function runPlan(plan, done) {
         }
         const sc = scenes[si];
         si++;
-        imageFromPrompt(String(sc.text), (err, file) => {
+        imageFromPrompt(scenesPrompt(sc), (err, file) => {
           if (!err) sc.image = fileUrl(path.basename(file));
           nextScene();
         });
