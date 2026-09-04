@@ -220,14 +220,17 @@ header h1 {
 .slide-cards {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  align-items: center;
+  gap: 10px;
   width: 100%;
 }
 
 .slide-card {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
+  width: 100%;
+  max-width: 560px;
   background: #1c1c3a;
   border: 2px solid transparent;
   border-radius: 10px;
@@ -242,10 +245,13 @@ header h1 {
 
 .slide-img {
   width: 100%;
-  max-height: 320px;
-  object-fit: cover;
+  height: auto;
+  max-height: 220px;
+  object-fit: contain;
   border-radius: 8px 8px 0 0;
   background: #000;
+  padding: 6px;
+  box-sizing: border-box;
 }
 
 .slide-card.no-img .slide-img {
@@ -260,11 +266,12 @@ header h1 {
   font-weight: 700;
   color: #fff;
   margin-bottom: 4px;
+  font-size: 15px;
 }
 
 .slide-desc {
   color: #ddd;
-  font-size: 14px;
+  font-size: 13px;
 }
 
 .slideshow-controls {
