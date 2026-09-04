@@ -31,7 +31,7 @@ function send(res, code, obj, origin) {
     'Content-Type': 'application/json',
     'Access-Control-Allow-Origin': allow,
     'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type'
+    'Access-Control-Allow-Headers': 'Content-Type, x-admin-token'
   });
   res.end(JSON.stringify(obj));
 }
