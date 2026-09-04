@@ -215,9 +215,12 @@ header h1 {
 }
 
 .generated-image {
-  max-width: 100%;
+  max-width: 480px;
+  max-height: 360px;
+  object-fit: contain;
   border-radius: 8px;
-  margin-top: 8px;
+  margin: 8px auto 0;
+  display: block;
   border: 1px solid #ddd;
 }
 
