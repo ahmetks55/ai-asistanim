@@ -8,8 +8,27 @@ const PORT = 8788;
 const OUTDIR = path.join(__dirname, 'bridge_output');
 if (!fs.existsSync(OUTDIR)) fs.mkdirSync(OUTDIR, { recursive: true });
 
-function send(res, code, obj) {
-  res.writeHead(code, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'GET,POST,OPTIONS', 'Access-Control-Allow-Headers': 'Content-Type' });
+const ALLOWED_BRIDGE_ORIGINS = [
+  'https://ahmetks55.github.io',
+  'http://localhost',
+  'http://127.0.0.1'
+];
+
+// Kötü niyetli web sayfalarının yerel köprüyü kullanmasını engeller.
+function originAllowed(origin) {
+  if (!origin) return true; // tarayıcı dışı istemciler (curl, node) origin göndermez
+  if (origin === 'null') return true; // file:// ile açılmış sayfa
+  return ALLOWED_BRIDGE_ORIGINS.some((o) => origin === o || origin.startsWith(o + ':'));
+}
+
+function send(res, code, obj, origin) {
+  const allow = originAllowed(origin) ? origin || '*' : 'null';
+  res.writeHead(code, {
+    'Content-Type': 'application/json',
+    'Access-Control-Allow-Origin': allow,
+    'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type'
+  });
   res.end(JSON.stringify(obj));
 }
 
@@ -42,7 +61,6 @@ function planTask(task) {
   const videoKW = /(video|slayt|sunum)/i;
   const sesKW = /(seslendir|konuş|okuy|anlat|ses)/i;
   const metinKW = /(hikaye|şiir|siir|mektup|rapor|özet|ozet|metin|yaz|makale)/i;
-  const webKW = /(ara|bul|internet|güncel|ogren|öğren)/i;
 
   if (resimKW.test(t)) steps.push({ type: 'image', prompt: task });
   if (sesKW.test(t)) steps.push({ type: 'tts', prompt: task });
@@ -53,17 +71,27 @@ function planTask(task) {
 }
 
 const server = http.createServer((req, res) => {
-  if (req.method === 'OPTIONS') return send(res, 204, {});
-  if (req.method === 'GET' && req.url === '/health') return send(res, 200, { ok: true, tool: 'bridge' });
-  if (req.method === 'GET' && req.url === '/models') return send(res, 200, { tools: ['image','text','tts','video'] });
+  const origin = req.headers.origin;
+  if (origin && !originAllowed(origin)) {
+    res.writeHead(403, { 'Content-Type': 'application/json' });
+    return res.end(JSON.stringify({ error: 'İzin verilmeyen kaynak' }));
+  }
+  if (req.method === 'OPTIONS') return send(res, 204, {}, origin);
+  if (req.method === 'GET' && req.url === '/health') return send(res, 200, { ok: true, tool: 'bridge' }, origin);
+  if (req.method === 'GET' && req.url === '/models') return send(res, 200, { tools: ['image','text','tts','video'] }, origin);
 
   if (req.method === 'POST' && req.url === '/run') {
     let body = '';
-    req.on('data', (c) => body += c);
+    let tooBig = false;
+    req.on('data', (c) => {
+      body += c;
+      if (Buffer.byteLength(body, 'utf8') > 1048576) tooBig = true;
+    });
     req.on('end', () => {
+      if (tooBig) return send(res, 413, { error: 'Görev çok büyük' }, origin);
       let task = '';
       try { task = JSON.parse(body).task || ''; } catch (e) { task = body; }
-      if (!task) return send(res, 400, { error: 'Görev boş' });
+      if (!task) return send(res, 400, { error: 'Görev boş' }, origin);
       const steps = planTask(task);
       const results = [];
       let done = 0;
@@ -84,12 +112,12 @@ const server = http.createServer((req, res) => {
         }
       });
       function finish() {
-        send(res, 200, { task, steps: steps.map(s => s.type), results });
+        send(res, 200, { task, steps: steps.map(s => s.type), results }, origin);
       }
     });
     return;
   }
-  send(res, 404, { error: 'Bilinmeyen yol' });
+  send(res, 404, { error: 'Bilinmeyen yol' }, origin);
 });
 
 server.listen(PORT, () => {

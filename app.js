@@ -291,16 +291,64 @@ function runCodeSnippet(code) {
   });
 }
 
+// GÜVENLİ aritmetik çözücü — eval() kullanmaz, yalnızca sayı + - * / ( ) işler.
+// Yanlış formatta null döner, çağıran taraf "Kod çalıştırma" yoluna düşer.
+function safeEvalArithmetic(expr) {
+  try {
+    const s = expr.replace(/\s+/g, '');
+    let i = 0;
+    const peek = () => s[i];
+    const number = () => {
+      let n = '';
+      while (i < s.length && /[0-9.]/.test(s[i])) { n += s[i]; i++; }
+      return n ? parseFloat(n) : NaN;
+    };
+    function factor() {
+      if (peek() === '(') {
+        i++;
+        const v = expression();
+        if (peek() === ')') i++;
+        return v;
+      }
+      const n = number();
+      if (isNaN(n)) throw new Error('geçersiz');
+      return n;
+    }
+    function term() {
+      let v = factor();
+      while (i < s.length && (s[i] === '*' || s[i] === '/')) {
+        const op = s[i++];
+        const r = factor();
+        v = op === '*' ? v * r : v / r;
+      }
+      return v;
+    }
+    function expression() {
+      let v = term();
+      while (i < s.length && (s[i] === '+' || s[i] === '-')) {
+        const op = s[i++];
+        const r = term();
+        v = op === '+' ? v + r : v - r;
+      }
+      return v;
+    }
+    const v = expression();
+    if (i !== s.length) throw new Error('geçersiz');
+    return Number.isFinite(v) ? v : null;
+  } catch (e) {
+    return null;
+  }
+}
+
 // 4) Web arama (ücretsiz, basit) - DuckDuckGo instant + bilgi
 async function webSearch(query) {
   try {
     const res = await fetch('https://api.duckduckgo.com/?q=' + encodeURIComponent(query) + '&format=json&no_html=1&skip_disambig=1');
     const data = await res.json();
-    let result = '';
-    if (data.AbstractText) result += '📚 ' + data.AbstractText + '\n';
-    if (data.AbstractURL) result += '\n🔗 ' + data.AbstractURL;
-    if (result) return result || 'Sonuç bulunamadı.';
-    // Related topics dene
+    if (data.AbstractText) {
+      return '📚 ' + data.AbstractText + (data.AbstractURL ? '\n🔗 ' + data.AbstractURL : '');
+    }
+    // Abstract bilgi yoksa ilgili sonuçları dene
     if (data.RelatedTopics && data.RelatedTopics.length) {
       const texts = data.RelatedTopics.slice(0, 3).map((t) => t.Text).filter(Boolean);
       if (texts.length) return 'İlgili sonuçlar:\n• ' + texts.join('\n• ');
@@ -637,15 +685,12 @@ async function tryDirectTool(text, typingEl) {
     // Gömülü kod bloğu var mı?
     const codeMatch = text.match(/```(?:js|javascript)?\s*\n?([\s\S]*?)\n?```/);
     let codeText = codeMatch ? codeMatch[1].trim() : text;
-    // "7 kere 8 hesapla" gibi doğal dil aritmetiğini JS'e çevir
-    const trNum = { 'bir':1,'iki':2,'üç':3,'uc':3,'dört':4,'dort':4,'beş':5,'bes':5,'altı':6,'alti':6,'yedi':7,'sekiz':8,'dokuz':9,'on':10 };
+    // "7 kere 8 hesapla" gibi doğal dil aritmetiğini güvenli şekilde çöz (eval yok)
     const trMap = (s) => s.replace(/\b(kere|çarpı|carp|ile|çarpılmış|carpilmis)\b/gi, '*').replace(/\b(artı|arti|toplam|topla)\b/gi, '+').replace(/\b(eksi|çıkar|cikar)\b/gi, '-').replace(/\b(bölü|bolu|böl)\b/gi, '/');
-    // Türkçe sayı sözcüklerini rakama çevir
-    let cleaned = trMap(codeText).replace(/[^0-9+\-*/().\s]/g, ' ').trim().replace(/\s+/g, ' ');
+    const cleaned = trMap(codeText).replace(/[^0-9+\-*/().\s]/g, ' ').trim().replace(/\s+/g, ' ');
     if (/^[\d+\-*/().\s]+$/.test(cleaned)) {
-      try { cleaned = String(eval(cleaned)); }
-      catch (e) { cleaned = null; }
-      if (cleaned !== null) { addMessage('**Sonuç:** ' + cleaned, 'bot'); return true; }
+      const parsed = safeEvalArithmetic(cleaned);
+      if (parsed !== null) { addMessage('**Sonuç:** ' + String(parsed), 'bot'); return true; }
     }
     const output = await runCodeSnippet(codeText);
     addMessage('**Kod çıktısı:**\n```\n' + output + '\n```', 'bot');
@@ -696,7 +741,7 @@ async function handleBridgeTask(task) {
     });
   } catch (e) {
     genEl.remove();
-    addMessage('⚠️ Köprüye bağlanılamadı. Kodu bu makinede çalıştırın:\n```\nnode "C:\\Users\\ASUS\\ai-web-tool\\bridge-server.js"\n```', 'bot');
+    addMessage('⚠️ Köprüye bağlanılamadı. Repo kökünde köprü sunucusunu başlatın:\n```\nnode bridge-server.js\n```', 'bot');
     return;
   }
   if (!res.ok) {
