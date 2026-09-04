@@ -9,26 +9,28 @@
 <body>
   <div class="container">
     <header>
-      <h1>🤖 AI Asistanım</h1>
-      <p class="subtitle">Ücretsiz AI Aracı - Gemini API ile</p>
-      <div class="zoom-control" title="Sayfa ölçeği">
-        <button id="zoomOut" title="Uzaklaştır">−</button>
-        <span id="zoomVal">%100</span>
-        <button id="zoomIn" title="Yakınlaştır">+</button>
+      <div class="hdr-left">
+        <div class="zoom-control" title="Sayfa ölçeği">
+          <button id="zoomOut" title="Uzaklaştır">−</button>
+          <span id="zoomVal">%100</span>
+          <button id="zoomIn" title="Yakınlaştır">+</button>
+        </div>
       </div>
-    </header>
-
-    <div class="settings">
-      <div class="mode-select">
-        <label>AI Modu:</label>
+      <div class="hdr-center">
+        <h1>🤖 AI Asistanım</h1>
+        <p class="subtitle">Ücretsiz AI Aracı - Gemini API ile</p>
+      </div>
+      <div class="hdr-right">
         <select id="aiMode">
-          <option value="bridge" selected>🏭 Yapay Şirket (Köprü)</option>
-          <option value="local">Yerel AI (Ollama)</option>
+          <option value="bridge" selected>🏭 Köprü</option>
+          <option value="local">Yerel (Ollama)</option>
           <option value="cloud">Bulut (Gemini)</option>
         </select>
         <span id="localStatus" class="status"></span>
       </div>
+    </header>
 
+    <div class="settings">
       <div class="cloud-fields" id="cloudFields">
         <input type="password" id="apiKey" placeholder="Gemini auth anahtarınızı girin (AQ...)">
         <button id="saveKey">Anahtarı Kaydet</button>
