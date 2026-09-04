@@ -13,22 +13,20 @@ body {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   min-height: 100vh;
   display: flex;
-  justify-content: center;
-  padding: 14px;
+  padding: 0;
 }
 
 .container {
   position: relative;
   width: 100%;
-  max-width: 860px;
-  background: rgba(255, 255, 255, 0.97);
-  border-radius: 14px;
-  box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+  max-width: none;
+  background: rgba(255, 255, 255, 0.98);
+  border-radius: 0;
+  box-shadow: none;
   padding: 16px;
   display: flex;
   flex-direction: column;
-  height: 92vh;
-  max-height: 820px;
+  height: 100vh;
 }
 
 .zoom-control {
@@ -193,10 +191,10 @@ header h1 {
 }
 
 .message {
-  margin-bottom: 12px;
-  padding: 12px 15px;
+  margin-bottom: 10px;
+  padding: 10px 13px;
   border-radius: 12px;
-  max-width: 85%;
+  max-width: min(72%, 640px);
   line-height: 1.5;
   animation: fadeIn 0.3s ease;
 }
