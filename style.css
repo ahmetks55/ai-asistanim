@@ -29,42 +29,6 @@ body {
   height: 100vh;
 }
 
-.zoom-control {
-  position: static;
-  display: flex;
-  align-items: center;
-  gap: 2px;
-  background: rgba(255, 255, 255, 0.9);
-  border: 1px solid #ddd;
-  border-radius: 20px;
-  padding: 2px 4px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
-}
-
-.zoom-control button {
-  border: none;
-  background: transparent;
-  font-size: 14px;
-  font-weight: 700;
-  line-height: 1;
-  cursor: pointer;
-  color: #555;
-  padding: 1px 5px;
-  border-radius: 50%;
-}
-
-.zoom-control button:hover {
-  background: #eee;
-}
-
-.zoom-control span {
-  font-size: 11px;
-  color: #555;
-  min-width: 34px;
-  text-align: center;
-  white-space: nowrap;
-}
-
 header {
   display: flex;
   align-items: center;

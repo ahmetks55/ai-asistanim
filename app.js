@@ -10,25 +10,6 @@ const cloudFields = document.getElementById('cloudFields');
 const noticeLocal = document.getElementById('noticeLocal');
 const noticeCloud = document.getElementById('noticeCloud');
 const localStatus = document.getElementById('localStatus');
-const zoomOutBtn = document.getElementById('zoomOut');
-const zoomInBtn = document.getElementById('zoomIn');
-const zoomValEl = document.getElementById('zoomVal');
-
-// Site geneli uzaklaştır/yakınlaştır (tarayıcı zoom'unu kullanamayan ortamlar için)
-(function initZoom() {
-  const container = document.querySelector('.container');
-  if (!container || !zoomOutBtn || !zoomInBtn || !zoomValEl) return;
-  let zoom = parseInt(localStorage.getItem('site_zoom') || '100', 10) || 100;
-  zoom = Math.max(50, Math.min(150, zoom));
-  function applyZoom() {
-    container.style.zoom = String(zoom / 100);
-    zoomValEl.textContent = '%' + zoom;
-    localStorage.setItem('site_zoom', String(zoom));
-  }
-  zoomOutBtn.addEventListener('click', () => { zoom = Math.max(50, zoom - 10); applyZoom(); });
-  zoomInBtn.addEventListener('click', () => { zoom = Math.min(150, zoom + 10); applyZoom(); });
-  applyZoom();
-})();
 
 const MODEL = 'gemini-3.5-flash';
 let apiKey = '';
@@ -840,18 +821,19 @@ async function tryDirectTool(text, typingEl) {
 // KÖPRÜ (YAPAY ŞİRKET) — görevi bu makinedeki bridge-server'a gönderir
 // Görev anlaşılır, araçlar çalışır, hazır dosyalar döner.
 // ------------------------------------------------
-// Son asistan mesajının düz metni — "bunu/şunu" göndermeleri için context görevi görür (ör. hikaye).
-function lastBotText() {
-  const msgs = messagesEl.querySelectorAll('.message.bot');
+// "bunu/şunu" göndermeleri için context: son anlamlı mesaj (kullanıcı veya asistan).
+// Şu an gönderilen görev metni (task) atlanır — hikaye kullanıcı mesajıysa da bulunur.
+function lastBotText(task) {
+  const msgs = messagesEl.querySelectorAll('.message');
   for (let i = msgs.length - 1; i >= 0; i--) {
-    const txt = messagePlainText(msgs[i]);
-    if (txt && !txt.startsWith('Asistan çalışıyor') && !txt.startsWith('Merhaba! Ben') &&
-        !txt.startsWith('🏭') && !txt.startsWith('🤖') && !txt.startsWith('🧠') &&
-        !txt.startsWith('✅') && !txt.startsWith('⚠️') && !txt.startsWith('**') &&
-        !txt.startsWith('🔊') && !txt.startsWith('🖼') && !txt.startsWith('💻') &&
-        !txt.startsWith('🎬') && !txt.startsWith('🔍')) {
-      return txt;
-    }
+    const txt = messagePlainText(msgs[i]).trim();
+    if (!txt || txt === String(task || '').trim()) continue;
+    if (txt.startsWith('Asistan çalışıyor') || txt.startsWith('Merhaba! Ben') ||
+        txt.startsWith('🏭') || txt.startsWith('🤖') || txt.startsWith('🧠') ||
+        txt.startsWith('✅') || txt.startsWith('⚠️') || txt.startsWith('**') ||
+        txt.startsWith('🔊') || txt.startsWith('🖼') || txt.startsWith('💻') ||
+        txt.startsWith('🎬') || txt.startsWith('🔍')) continue;
+    return txt;
   }
   return '';
 }
@@ -866,7 +848,7 @@ async function handleBridgeTask(task, typingEl) {
     res = await fetch('http://localhost:8788/run', {
       method: 'POST',
       headers: hdrs,
-      body: JSON.stringify({ task: task, context: lastBotText() })
+      body: JSON.stringify({ task: task, context: lastBotText(task) })
     });
   } catch (e) {
     typingEl.remove();
