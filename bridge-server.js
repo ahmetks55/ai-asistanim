@@ -137,39 +137,56 @@ function cleanImagePrompt(raw) {
   const s = String(raw || '').trim().replace(/[.,;:!?'"”’()[\]{}]+$/g, '');
   const kept = s.split(/\s+/).filter((w) => w && !IMAGE_STOP.test(w));
   const out = kept.join(' ').trim();
-  return out || s;
+  return out || 'güzel bir manzara sahnesi, yüksek detay, canlı renkler';
 }
+function promptHash(p) {
+  let h = 0;
+  for (const c of String(p)) h = (h * 31 + c.codePointAt(0)) | 0;
+  return (Math.abs(h) % 2147483647) + 1;
+}
+// Görsel üretimi (Pollinations) — deterministik: aynı prompt aynı seed → aynı görsel.
+// Yeni gen endpoint'i denenir; eski endpoint'e otomatik düşer.
 function imageFromPrompt(prompt, cb, attempt) {
   const clean = cleanImagePrompt(prompt);
-  console.log('[görsel] istenen:', JSON.stringify(String(prompt)), '-> flux prompt:', JSON.stringify(clean));
+  const seed = promptHash(clean);
+  console.log('[görsel] istenen:', JSON.stringify(String(prompt)), '-> flux prompt:', JSON.stringify(clean), 'seed:', seed);
   attempt = attempt || 0;
-  const url = 'https://image.pollinations.ai/prompt/' + encodeURIComponent(clean.slice(0, 300)) + '?width=768&height=768&nologo=true&model=flux';
+  const enc = encodeURIComponent(clean.slice(0, 300));
+  const urls = [
+    'https://gen.pollinations.ai/image/' + enc + '?width=768&height=768&nologo=true&model=flux&seed=' + seed,
+    'https://image.pollinations.ai/prompt/' + enc + '?width=768&height=768&nologo=true&model=flux&seed=' + seed
+  ];
   const file = path.join(OUTDIR, uniq('gorsel') + '.jpg');
-  const req = https.get(url, { timeout: 25000 }, (r) => {
-    if (r.statusCode >= 400) {
-      req.destroy();
-      if (attempt < 1) return setTimeout(() => imageFromPrompt(prompt, cb, attempt + 1), 1500);
-      return cb(new Error('Görsel servisi ' + r.statusCode));
-    }
-    const f = fs.createWriteStream(file);
-    r.pipe(f);
-    f.on('finish', () => {
-      let st;
-      try { st = fs.statSync(file); } catch (e) { st = { size: 0 }; }
-      if (st.size < 1024) {
-        try { fs.unlinkSync(file); } catch (e) {}
+  const tryUrl = (idx) => {
+    const req = https.get(urls[idx], { timeout: 25000 }, (r) => {
+      if (r.statusCode >= 400) {
+        req.destroy();
+        if (idx === 0) return tryUrl(1); // yeni endpoint çalışmadı, eskiye düş
         if (attempt < 1) return setTimeout(() => imageFromPrompt(prompt, cb, attempt + 1), 1500);
-        return cb(new Error('Görsel boş döndü (doğrulama başarısız)'));
+        return cb(new Error('Görsel servisi ' + r.statusCode));
       }
-      cb(null, file);
+      const f = fs.createWriteStream(file);
+      r.pipe(f);
+      f.on('finish', () => {
+        let st;
+        try { st = fs.statSync(file); } catch (e) { st = { size: 0 }; }
+        if (st.size < 1024) {
+          try { fs.unlinkSync(file); } catch (e) {}
+          if (attempt < 1) return setTimeout(() => imageFromPrompt(prompt, cb, attempt + 1), 1500);
+          return cb(new Error('Görsel boş döndü (doğrulama başarısız)'));
+        }
+        cb(null, file);
+      });
+      f.on('error', (e) => cb(e));
     });
-    f.on('error', (e) => cb(e));
-  });
-  req.on('timeout', () => req.destroy(new Error('Görsel üretimi zaman aşımı')));
-  req.on('error', (e) => {
-    if (attempt < 1) return setTimeout(() => imageFromPrompt(prompt, cb, attempt + 1), 1500);
-    cb(e);
-  });
+    req.on('timeout', () => req.destroy(new Error('Görsel üretimi zaman aşımı')));
+    req.on('error', (e) => {
+      if (idx === 0) return tryUrl(1);
+      if (attempt < 1) return setTimeout(() => imageFromPrompt(prompt, cb, attempt + 1), 1500);
+      cb(e);
+    });
+  };
+  tryUrl(0);
 }
 
 // Güvenli aritmetik çözücü (eval yok) — recursive descent
