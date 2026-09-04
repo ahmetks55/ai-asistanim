@@ -197,7 +197,7 @@ function runTTS(text) {
 
 // 2) Slayt Video üretimi - canvas + TTS + animasyon (ücretsiz)
 function makeSlideshowVideo(scenes) {
-  // scenes: [{title, text, color}] dizisi
+  // scenes: [{title, text, color, image?}] dizisi — image varsa arkaplan görseli kullanılır
   if (!Array.isArray(scenes) || scenes.length === 0) return false;
   const holder = document.createElement('div');
   holder.className = 'slideshow-holder';
@@ -220,25 +220,48 @@ function makeSlideshowVideo(scenes) {
   info.className = 'video-info';
   holder.appendChild(info);
 
-  let idx = 0;
   let running = false;
+  const bgImg = {}; // sahne index -> Image
 
-  function drawScene(i) {
+  function overlayText(i) {
     const s = scenes[i];
-    const grad = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
-    grad.addColorStop(0, '#667eea');
-    grad.addColorStop(1, s.color || '#764ba2');
-    ctx.fillStyle = grad;
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
     ctx.fillStyle = '#ffffff';
     ctx.textAlign = 'center';
     ctx.font = 'bold 40px Segoe UI, sans-serif';
-    ctx.fillText(s.title, canvas.width / 2, canvas.height / 2 - 20);
+    ctx.fillText(s.title, canvas.width / 2, canvas.height / 2 - 90);
+    ctx.fillStyle = 'rgba(255,255,255,0.95)';
     ctx.font = '22px Segoe UI, sans-serif';
     // Metni kısalt
     const short = s.text.length > 120 ? s.text.slice(0, 117) + '...' : s.text;
-    ctx.fillText(short, canvas.width / 2, canvas.height / 2 + 40);
+    ctx.fillText(short, canvas.width / 2, canvas.height / 2 + 10, canvas.width - 60);
   }
+
+  function drawScene(i) {
+    const s = scenes[i];
+    ctx.fillStyle = '#1a1a2e';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    if (s.image && bgImg[i] && bgImg[i].complete && bgImg[i].naturalWidth > 0) {
+      // Arkaplan görseli + karartma (metin okunur olsun)
+      ctx.drawImage(bgImg[i], 0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = 'rgba(10,10,35,0.45)';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+    } else {
+      ctx.fillStyle = '#1d1d3b';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
+    overlayText(i);
+  }
+
+  // Görsel arkaplanlarını önceden yükle (kaynak: köprü üzerinden doğrulanmış, CORS uyumlu)
+  scenes.forEach((s, i) => {
+    if (!s.image) return;
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => { bgImg[i] = img; drawScene(i); };
+    img.onerror = () => { bgImg[i] = null; drawScene(i); };
+    bgImg[i] = img;
+    img.src = s.image;
+  });
 
   function runScene(i) {
     if (i >= scenes.length) { running = false; info.textContent = '✅ Video tamamlandı.'; return; }
@@ -463,7 +486,9 @@ async function sendMessage() {
 
   // --- ARAÇLARI GEMİNİ'SIZ, SINIRSIZ ÇALIŞTIR ---
   // Net bir araç komutu verildiyse Gemini'ye hiç uğramadan tarayıcıda halleder.
-  const handled = await tryDirectTool(text, typingEl);
+  // Köprü modunda bu işi köprüdeki YÖNETİCİ üstlenir (context ile, doğrulayarak):
+  // "bunu video yap" gibi istekler son asistan metnini (ör. hikaye) kullanır.
+  const handled = getMode() !== 'bridge' ? await tryDirectTool(text, typingEl) : false;
   if (handled) {
     sendBtn.disabled = false;
     userInput.focus();
@@ -472,8 +497,7 @@ async function sendMessage() {
 
   try {
     if (getMode() === 'bridge') {
-      typingEl.remove();
-      await handleBridgeTask(text);
+      await handleBridgeTask(text, typingEl);
     } else if (getMode() === 'local') {
       await handleLocalChat(text, typingEl);
     } else {
@@ -729,39 +753,91 @@ async function tryDirectTool(text, typingEl) {
 // KÖPRÜ (YAPAY ŞİRKET) — görevi bu makinedeki bridge-server'a gönderir
 // Görev anlaşılır, araçlar çalışır, hazır dosyalar döner.
 // ------------------------------------------------
-async function handleBridgeTask(task) {
-  const genEl = addMessage('🏭 Görev köprüye gönderiliyor (Yapay Şirket çalışıyor)...', 'bot');
-  genEl.classList.add('typing');
+// Son asistan mesajının düz metni — "bunu/şunu" göndermeleri için context görevi görür (ör. hikaye).
+function lastBotText() {
+  const msgs = messagesEl.querySelectorAll('.message.bot');
+  for (let i = msgs.length - 1; i >= 0; i--) {
+    const txt = messagePlainText(msgs[i]);
+    if (txt && !txt.startsWith('Asistan çalışıyor') && !txt.startsWith('Merhaba! Ben') &&
+        !txt.startsWith('🏭') && !txt.startsWith('🤖') && !txt.startsWith('🧠') &&
+        !txt.startsWith('✅') && !txt.startsWith('⚠️') && !txt.startsWith('**') &&
+        !txt.startsWith('🔊') && !txt.startsWith('🖼') && !txt.startsWith('💻') &&
+        !txt.startsWith('🎬') && !txt.startsWith('🔍')) {
+      return txt;
+    }
+  }
+  return '';
+}
+
+async function handleBridgeTask(task, typingEl) {
+  typingEl.textContent = '🏭 Yönetici görevi planlıyor...';
   let res;
   try {
     res = await fetch('http://localhost:8788/run', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ task: task })
+      body: JSON.stringify({ task: task, context: lastBotText() })
     });
   } catch (e) {
-    genEl.remove();
-    addMessage('⚠️ Köprüye bağlanılamadı. Repo kökünde köprü sunucusunu başlatın:\n```\nnode bridge-server.js\n```', 'bot');
+    typingEl.remove();
+    addMessage('⚠️ Köprüye bağlanılamadı. Bu makinede köprüyü başlatın:\n```\nnode bridge-server.js\n```', 'bot');
     return;
   }
   if (!res.ok) {
-    genEl.remove();
+    typingEl.remove();
     addMessage('⚠️ Köprü hatası (' + res.status + ')', 'bot');
     return;
   }
   const data = await res.json();
-  genEl.remove();
-  let out = '🏭 **Görev tamamlandı** — ' + data.task + '\n\n**Planlanan adımlar:** ' + (data.steps || []).join(', ') + '\n\n**Üretilenler:**\n';
-  (data.results || []).forEach((r) => {
-    if (r.file) {
-      out += '- **' + r.type + ':** ' + r.file + '\n';
-    } else if (r.content) {
-      out += '- **' + r.type + ' metni:** ' + r.content + '\n';
-    } else if (r.note) {
-      out += '- **' + r.type + ':** ' + r.note + '\n';
-    } else if (r.error) {
-      out += '- **' + r.type + ':** hata (' + r.error + ')\n';
+  typingEl.remove();
+
+  // Yönetici bu görevi ücretsiz araçlara yönlendiremedi → beyne (Gemini) otomatik devreder.
+  if (data.status === 'needs_brain') {
+    addMessage('🤖 **Yönetici:** bu görev ücretsiz araç değil, sohbet beyni gerektiriyor. Beyne devrediyorum…', 'bot');
+    const brainEl = addMessage('🧠 Sohbet beyni çalışıyor...', 'bot');
+    brainEl.classList.add('typing');
+    if (apiKey) {
+      try {
+        await handleInteraction(task, brainEl, TOOLS);
+      } catch (e) {
+        brainEl.remove();
+        addMessage('⚠️ Beyin hatası: ' + e.message, 'bot');
+      }
+    } else {
+      brainEl.remove();
+      addMessage('Beyni çalıştırmak için üstteki karta Gemini anahtarını girin (ücretsiz ~20 sohbet/gün) veya **Bulut** modunu seçip aynı isteği yapın.', 'bot');
     }
-  });
-  addMessage(out, 'bot');
+    return;
+  }
+
+  if (data.plan && data.plan.length) {
+    addMessage('🏭 **Yönetici planı:** ' + data.plan.join(' → ') + ' (0 kota, sınırsız)', 'bot');
+  }
+  for (const r of (data.results || [])) {
+    if (r.type === 'image') {
+      if (r.url) {
+        addMessage('🖼️ **Görsel üretildi (doğrulandı):** ' + (r.prompt || ''), 'bot');
+        addImageMessage(r.url, r.prompt || 'Görsel');
+      } else {
+        addMessage('⚠️ Görsel üretilemedi: ' + (r.error || 'bilinmeyen hata'), 'bot');
+      }
+    } else if (r.type === 'scenes') {
+      const ok = makeSlideshowVideo(r.scenes || []);
+      addMessage('🎬 ' + (r.note || 'Senaryo hazır') + (ok ? ' — ▶ Başlat ile oynat' : ' — oynatılamadı'), 'bot');
+    } else if (r.type === 'speak') {
+      addMessage('🔊 Anlatım metni hazır, seslendiriliyor (sınırsız, ücretsiz)...', 'bot');
+      await runTTS(r.text || '');
+      addMessage('🔊 Seslendirme tamamlandı.', 'bot');
+    } else if (r.type === 'result') {
+      addMessage('✅ **Sonuç:** ' + r.text, 'bot');
+    } else if (r.type === 'run_code') {
+      addMessage('💻 Kod tarayıcıda güvenli sandbox ile çalıştırılıyor...', 'bot');
+      const output = await runCodeSnippet(r.code || '');
+      addMessage('**Kod çıktısı:**\n```\n' + output + '\n```', 'bot');
+    } else if (r.type === 'search') {
+      addMessage('🔍 **Arama sonucu:**\n' + (r.text || r.error || ''), 'bot');
+    } else if (r.error) {
+      addMessage('⚠️ **' + r.type + ' hatası:** ' + r.error, 'bot');
+    }
+  }
 }
