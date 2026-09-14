@@ -110,17 +110,17 @@ function saveActiveProviders() {
 function updateProviderUI() {
   const p = PROVIDERS[currentProvider];
   providerIcon.textContent = p.icon;
-  providerName.textContent = p.name;
-  // Show active providers in header
-  const activeList = Object.entries(PROVIDERS).filter(([k, v]) => v.active);
-  if (activeList.length > 1) {
-    providerName.textContent = activeList.map(([k, v]) => v.icon).join(' ');
+  // Köpri her zaman aktif, arka planda diğerlerini kullanır
+  const activeList = Object.entries(PROVIDERS).filter(([k, v]) => v.active && k !== 'bridge');
+  if (activeList.length) {
+    providerName.textContent = 'Köpri + ' + activeList.map(([k, v]) => v.icon).join('');
+  } else {
+    providerName.textContent = 'Köpri';
   }
   document.querySelectorAll('.provider-group').forEach(el => {
     const pid = el.dataset.provider;
     el.classList.toggle('active', pid === currentProvider);
   });
-  // Sync checkboxes
   document.querySelectorAll('.provider-check-input').forEach(cb => {
     const pid = cb.dataset.provider;
     if (PROVIDERS[pid]) cb.checked = PROVIDERS[pid].active;
@@ -171,24 +171,24 @@ async function checkConnections() {
     } catch (e) {}
   }
   updateProviderUI();
-  // Build status text from active providers
-  const activeProviders = Object.entries(PROVIDERS).filter(([k, v]) => v.active);
-  const parts = activeProviders.filter(([k, v]) => v.connected).map(([k, v]) => v.icon + ' ' + v.name);
-  localStatus.textContent = parts.length ? '✓ ' + parts.join(' + ') : '⚠️ Aktif sağlayıcı yok';
-  localStatus.className = 'status ' + (parts.length ? 'ok' : 'error');
+  // Build status text — köprü her zaman aktif, diğer bağlı olanları göster
+  const connected = [];
+  if (PROVIDERS.nara.connected) connected.push('🧠 Nara');
+  if (PROVIDERS.gemini.connected) connected.push('✨ Gemini');
+  if (PROVIDERS.ollama.connected) connected.push('🦙 Ollama');
+  if (PROVIDERS.pollinations.connected) connected.push('🎨 Pollinations');
+  localStatus.textContent = '✓ Köpri → ' + (connected.length ? connected.join(' + ') : 'bağlı sağlayıcı yok');
+  localStatus.className = 'status ok';
 }
 
 function getMode() {
-  // Return the primary active provider's mode
-  const activeProviders = Object.entries(PROVIDERS).filter(([k, v]) => v.active);
-  if (activeProviders.some(([k]) => k === 'bridge')) return 'bridge';
-  if (activeProviders.some(([k]) => k === 'ollama')) return 'local';
-  if (activeProviders.some(([k]) => k === 'gemini')) return 'cloud';
+  // Köpri her zaman birincil — arka planda NaraRouter, Gemini, Pollinations'i kullanır
   return 'bridge';
 }
 
 function getActiveProviders() {
-  return Object.entries(PROVIDERS).filter(([k, v]) => v.active).map(([k]) => k);
+  // Tüm aktif sağlayıcıları döndür (köpri her zaman dahil)
+  return ['bridge', ...Object.entries(PROVIDERS).filter(([k, v]) => v.active && k !== 'bridge').map(([k]) => k)];
 }
 
 // --- MODAL ---
