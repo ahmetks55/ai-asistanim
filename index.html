@@ -16,11 +16,11 @@
         <h1>🤖 AI Asistanım</h1>
       </div>
       <div class="hdr-right">
-        <select id="aiMode">
-          <option value="bridge" selected>🏭 Köprü</option>
-          <option value="local">Yerel (Ollama)</option>
-          <option value="cloud">Bulut (Gemini)</option>
-        </select>
+        <button id="providerBtn" class="provider-trigger">
+          <span id="providerIcon">🤖</span>
+          <span id="providerName">Köprü</span>
+          <span class="provider-arrow">▾</span>
+        </button>
         <span id="localStatus" class="status"></span>
       </div>
     </header>
@@ -54,6 +54,67 @@
     <div class="input-area">
       <textarea id="userInput" rows="3" placeholder="Bana bir şey sorun..."></textarea>
       <button id="sendBtn">Gönder →</button>
+    </div>
+  </div>
+
+  <!-- PROVIDER MODAL -->
+  <div id="providerModal" class="modal-overlay" style="display:none">
+    <div class="modal-panel">
+      <div class="modal-header">
+        <h2>Sağlayıcı & Model</h2>
+        <button id="modalClose" class="modal-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="modal-sidebar">
+          <div class="provider-group" data-provider="bridge">
+            <span class="provider-icon">🏭</span>
+            <div class="provider-info">
+              <div class="provider-title">Köpri</div>
+              <div class="provider-desc">Yönetici + Araçlar</div>
+            </div>
+            <span class="provider-check">✓</span>
+          </div>
+          <div class="provider-group" data-provider="nara">
+            <span class="provider-icon">🧠</span>
+            <div class="provider-info">
+              <div class="provider-title">NaraRouter</div>
+              <div class="provider-desc">Ücretsiz LLM</div>
+            </div>
+            <span class="provider-check">✓</span>
+          </div>
+          <div class="provider-group" data-provider="gemini">
+            <span class="provider-icon">✨</span>
+            <div class="provider-info">
+              <div class="provider-title">Gemini</div>
+              <div class="provider-desc">Google AI</div>
+            </div>
+            <span class="provider-check">✓</span>
+          </div>
+          <div class="provider-group" data-provider="ollama">
+            <span class="provider-icon">🦙</span>
+            <div class="provider-info">
+              <div class="provider-title">Ollama</div>
+              <div class="provider-desc">Yerel AI</div>
+            </div>
+            <span class="provider-check">✓</span>
+          </div>
+          <div class="provider-group" data-provider="pollinations">
+            <span class="provider-icon">🎨</span>
+            <div class="provider-info">
+              <div class="provider-title">Pollinations</div>
+              <div class="provider-desc">Görsel Üretimi</div>
+            </div>
+            <span class="provider-check">✓</span>
+          </div>
+        </div>
+        <div class="modal-content">
+          <div class="modal-search">
+            <input type="text" id="modelSearch" placeholder="Model ara..." autofocus>
+          </div>
+          <div class="modal-models" id="modelList"></div>
+          <div class="modal-config" id="providerConfig"></div>
+        </div>
+      </div>
     </div>
   </div>
 

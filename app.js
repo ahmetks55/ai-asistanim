@@ -5,30 +5,278 @@ const apiKeyInput = document.getElementById('apiKey');
 const saveKeyBtn = document.getElementById('saveKey');
 const rememberKey = document.getElementById('rememberKey');
 const keyStatus = document.getElementById('keyStatus');
-const aiMode = document.getElementById('aiMode');
 const cloudFields = document.getElementById('cloudFields');
 const noticeLocal = document.getElementById('noticeLocal');
 const noticeCloud = document.getElementById('noticeCloud');
 const localStatus = document.getElementById('localStatus');
 
+// Provider modal elements
+const providerBtn = document.getElementById('providerBtn');
+const providerModal = document.getElementById('providerModal');
+const modalClose = document.getElementById('modalClose');
+const modelSearch = document.getElementById('modelSearch');
+const modelList = document.getElementById('modelList');
+const providerConfig = document.getElementById('providerConfig');
+const providerIcon = document.getElementById('providerIcon');
+const providerName = document.getElementById('providerName');
+
 const MODEL = 'gemini-3.5-flash';
 let apiKey = '';
 
-// Store/load saved key
-function loadSavedKey() {
-  const saved = localStorage.getItem('gemini_auth_key');
-  if (saved) {
-    apiKey = saved;
-    apiKeyInput.value = saved;
+// --- PROVIDER SYSTEM ---
+const PROVIDERS = {
+  bridge: {
+    name: 'Köpri', icon: '🏭', desc: 'Yönetici + Araçlar',
+    connected: true,
+    models: [
+      { id: 'bridge-auto', name: 'Otomatik (Yönetici)', desc: 'Yönetici en iyi aracı seçer', tag: 'free', type: 'local' }
+    ]
+  },
+  nara: {
+    name: 'NaraRouter', icon: '🧠', desc: 'Ücretsiz LLM',
+    connected: false,
+    models: [
+      { id: 'tencent-hy3-free', name: 'Tencent HY3', desc: 'Hızlı, ücretsiz', tag: 'free', type: 'free' },
+      { id: 'stepfun-3.7-flash', name: 'StepFun 3.7 Flash', desc: 'Ücretsiz', tag: 'free', type: 'free' },
+      { id: 'agnes-2.5-flash', name: 'Agnes 2.5 Flash', desc: 'Ücretsiz', tag: 'free', type: 'free' },
+      { id: 'laguna-s-2.1', name: 'Laguna S 2.1', desc: 'Ücretsiz', tag: 'free', type: 'free' }
+    ]
+  },
+  gemini: {
+    name: 'Gemini', icon: '✨', desc: 'Google AI',
+    connected: false,
+    models: [
+      { id: 'gemini-3.5-flash', name: 'Gemini 3.5 Flash', desc: 'Hızlı, ücretsiz kota', tag: 'free', type: 'free' }
+    ]
+  },
+  ollama: {
+    name: 'Ollama', icon: '🦙', desc: 'Yerel AI',
+    connected: false,
+    models: []
+  },
+  pollinations: {
+    name: 'Pollinations', icon: '🎨', desc: 'Görsel Üretimi',
+    connected: true,
+    models: [
+      { id: 'flux', name: 'Flux', desc: 'Ücretsiz görsel üretimi', tag: 'free', type: 'local' }
+    ]
+  }
+};
+
+let currentProvider = 'bridge';
+let currentModel = 'bridge-auto';
+
+function loadProviderState() {
+  const saved = localStorage.getItem('ai_provider');
+  if (saved && PROVIDERS[saved]) currentProvider = saved;
+  const savedModel = localStorage.getItem('ai_model');
+  if (savedModel) currentModel = savedModel;
+  const gKey = localStorage.getItem('gemini_auth_key');
+  if (gKey) {
+    PROVIDERS.gemini.connected = true;
+    apiKey = gKey;
+    apiKeyInput.value = gKey;
     rememberKey.checked = true;
     keyStatus.textContent = '✓ Anahtar yüklendi';
-    keyStatus.classList.remove('error');
   }
-  // Mod tercihini yükle
-  const mode = localStorage.getItem('ai_mode') || 'bridge';
-  aiMode.value = mode;
-  applyMode(mode);
+  const nKey = localStorage.getItem('nararouter_key');
+  if (nKey) PROVIDERS.nara.connected = true;
+  updateProviderUI();
+  checkConnections();
 }
+
+function updateProviderUI() {
+  const p = PROVIDERS[currentProvider];
+  providerIcon.textContent = p.icon;
+  providerName.textContent = p.name;
+  document.querySelectorAll('.provider-group').forEach(el => {
+    el.classList.toggle('active', el.dataset.provider === currentProvider);
+    el.classList.toggle('connected', PROVIDERS[el.dataset.provider]?.connected);
+  });
+}
+
+async function checkConnections() {
+  try {
+    const ctrl = new AbortController();
+    const to = setTimeout(() => ctrl.abort(), 4000);
+    const res = await fetch('http://localhost:8788/health', { signal: ctrl.signal });
+    clearTimeout(to);
+    PROVIDERS.bridge.connected = res.ok;
+  } catch (e) {
+    PROVIDERS.bridge.connected = false;
+  }
+  try {
+    const ctrl = new AbortController();
+    const to = setTimeout(() => ctrl.abort(), 4000);
+    const res = await fetch('http://localhost:11434/api/tags', { signal: ctrl.signal });
+    clearTimeout(to);
+    if (res.ok) {
+      const data = await res.json();
+      PROVIDERS.ollama.connected = true;
+      PROVIDERS.ollama.models = (data.models || []).map(m => ({
+        id: m.name, name: m.name, desc: 'Yerel model', tag: 'free', type: 'local'
+      }));
+    } else {
+      PROVIDERS.ollama.connected = false;
+    }
+  } catch (e) {
+    PROVIDERS.ollama.connected = false;
+  }
+  if (PROVIDERS.nara.connected) {
+    try {
+      const ctrl = new AbortController();
+      const to = setTimeout(() => ctrl.abort(), 5000);
+      const res = await fetch('http://localhost:8788/models', { signal: ctrl.signal });
+      clearTimeout(to);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.nara && data.nara.chat && data.nara.chat.length) {
+          PROVIDERS.nara.models = data.nara.chat.map(id => ({
+            id, name: id, desc: 'NaraRouter', tag: 'free', type: 'free'
+          }));
+        }
+      }
+    } catch (e) {}
+  }
+  updateProviderUI();
+  const parts = [];
+  if (PROVIDERS.bridge.connected) parts.push('🏭 Köpri');
+  if (PROVIDERS.nara.connected) parts.push('🧠 Nara');
+  if (PROVIDERS.gemini.connected) parts.push('✨ Gemini');
+  if (PROVIDERS.ollama.connected) parts.push('🦙 Ollama');
+  localStatus.textContent = parts.length ? '✓ ' + parts.join(' | ') : '⚠️ Bağlantı yok';
+  localStatus.className = 'status ' + (parts.length ? 'ok' : 'error');
+}
+
+function getMode() {
+  if (currentProvider === 'bridge') return 'bridge';
+  if (currentProvider === 'ollama') return 'local';
+  if (currentProvider === 'gemini') return 'cloud';
+  return 'bridge';
+}
+
+// --- MODAL ---
+function openModal() {
+  providerModal.style.display = 'flex';
+  modelSearch.value = '';
+  modelSearch.focus();
+  renderModels();
+  renderConfig();
+}
+
+function closeModal() {
+  providerModal.style.display = 'none';
+}
+
+function renderModels() {
+  const search = modelSearch.value.toLowerCase();
+  modelList.innerHTML = '';
+  const providers = Object.entries(PROVIDERS);
+  for (const [pid, p] of providers) {
+    const models = p.models.filter(m =>
+      !search || m.name.toLowerCase().includes(search) || m.id.toLowerCase().includes(search) || m.desc.toLowerCase().includes(search)
+    );
+    if (!models.length) continue;
+    const hdr = document.createElement('div');
+    hdr.className = 'model-item';
+    hdr.style.cssText = 'background:rgba(255,255,255,0.03);cursor:default;font-weight:600;';
+    hdr.innerHTML = '<span style="font-size:16px">' + p.icon + '</span><div class="model-info"><div class="model-name">' + p.name + '</div><div class="model-meta">' + (p.connected ? '✓ Bağlı' : '✗ Bağlı değil') + '</div></div>';
+    modelList.appendChild(hdr);
+    for (const m of models) {
+      const el = document.createElement('div');
+      el.className = 'model-item' + (m.id === currentModel ? ' active' : '');
+      el.innerHTML = '<div class="model-dot ' + m.type + '"></div><div class="model-info"><div class="model-name">' + m.name + '</div><div class="model-meta">' + m.desc + '</div></div><span class="model-tag ' + m.tag + '">' + m.tag + '</span>' + (m.id === currentModel ? '<span class="model-tag active-tag">aktif</span>' : '');
+      el.addEventListener('click', () => selectModel(pid, m.id));
+      modelList.appendChild(el);
+    }
+  }
+  if (!modelList.children.length) {
+    modelList.innerHTML = '<div style="color:#666;padding:20px;text-align:center">Model bulunamadı</div>';
+  }
+}
+
+function selectModel(providerId, modelId) {
+  currentProvider = providerId;
+  currentModel = modelId;
+  localStorage.setItem('ai_provider', providerId);
+  localStorage.setItem('ai_model', modelId);
+  updateProviderUI();
+  renderModels();
+  renderConfig();
+  applyMode(getMode());
+  closeModal();
+}
+
+function renderConfig() {
+  providerConfig.innerHTML = '';
+  if (currentProvider === 'nara') {
+    const key = localStorage.getItem('nararouter_key') || '';
+    providerConfig.innerHTML = '<div class="config-row"><label>API Key</label><input type="password" id="naraKeyInput" placeholder="sk-nry-..." value="' + key + '"><button id="naraKeySave">Kaydet</button></div><div class="config-status" id="naraKeyStatus">' + (PROVIDERS.nara.connected ? '✓ Bağlı' : '') + '</div>';
+    providerConfig.classList.add('visible');
+    document.getElementById('naraKeySave').addEventListener('click', () => {
+      const v = document.getElementById('naraKeyInput').value.trim();
+      if (v) {
+        localStorage.setItem('nararouter_key', v);
+        PROVIDERS.nara.connected = true;
+        document.getElementById('naraKeyStatus').textContent = '✓ Kaydedildi';
+        document.getElementById('naraKeyStatus').className = 'config-status';
+        checkConnections();
+      }
+    });
+  } else if (currentProvider === 'gemini') {
+    const key = localStorage.getItem('gemini_auth_key') || '';
+    providerConfig.innerHTML = '<div class="config-row"><label>API Key</label><input type="password" id="geminiKeyInput" placeholder="AQ..." value="' + key + '"><button id="geminiKeySave">Kaydet</button></div><div class="config-status" id="geminiKeyStatus">' + (PROVIDERS.gemini.connected ? '✓ Bağlı' : '') + '</div>';
+    providerConfig.classList.add('visible');
+    document.getElementById('geminiKeySave').addEventListener('click', () => {
+      const v = document.getElementById('geminiKeyInput').value.trim();
+      if (v) {
+        localStorage.setItem('gemini_auth_key', v);
+        apiKey = v;
+        PROVIDERS.gemini.connected = true;
+        document.getElementById('geminiKeyStatus').textContent = '✓ Kaydedildi';
+        document.getElementById('geminiKeyStatus').className = 'config-status';
+        checkConnections();
+      }
+    });
+  } else if (currentProvider === 'ollama') {
+    providerConfig.innerHTML = '<div class="config-row"><label>Durum</label><span style="color:' + (PROVIDERS.ollama.connected ? '#4ade80' : '#ef4444') + ';font-size:12px">' + (PROVIDERS.ollama.connected ? '✓ Ollama çalışıyor (' + PROVIDERS.ollama.models.length + ' model)' : '✗ Ollama bulunamadı') + '</span></div>';
+    providerConfig.classList.add('visible');
+  } else {
+    providerConfig.classList.remove('visible');
+  }
+}
+
+// --- EVENTS ---
+providerBtn.addEventListener('click', openModal);
+modalClose.addEventListener('click', closeModal);
+providerModal.addEventListener('click', (e) => {
+  if (e.target === providerModal) closeModal();
+});
+modelSearch.addEventListener('input', renderModels);
+
+document.querySelectorAll('.provider-group').forEach(el => {
+  el.addEventListener('click', () => {
+    const pid = el.dataset.provider;
+    if (PROVIDERS[pid]) {
+      currentProvider = pid;
+      localStorage.setItem('ai_provider', pid);
+      if (PROVIDERS[pid].models.length) {
+        currentModel = PROVIDERS[pid].models[0].id;
+        localStorage.setItem('ai_model', currentModel);
+      }
+      updateProviderUI();
+      renderModels();
+      renderConfig();
+      applyMode(getMode());
+    }
+  });
+});
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && providerModal.style.display === 'flex') closeModal();
+});
+
+// Store/load saved key — provider system handles this via loadProviderState()
 
 function applyMode(mode) {
   // Köprü modu öncelikli: Ollama + Gemini devre dışı, köprüye bağlan
@@ -96,12 +344,6 @@ async function checkLocalOllama() {
   }
 }
 
-aiMode.addEventListener('change', () => {
-  const mode = aiMode.value;
-  localStorage.setItem('ai_mode', mode);
-  applyMode(mode);
-});
-
 saveKeyBtn.addEventListener('click', () => {
   apiKey = apiKeyInput.value.trim();
   if (!apiKey) {
@@ -111,11 +353,14 @@ saveKeyBtn.addEventListener('click', () => {
   }
   if (rememberKey.checked) {
     localStorage.setItem('gemini_auth_key', apiKey);
+    PROVIDERS.gemini.connected = true;
   } else {
     localStorage.removeItem('gemini_auth_key');
+    PROVIDERS.gemini.connected = false;
   }
   keyStatus.textContent = '✓ Anahtar kaydedildi';
   keyStatus.classList.remove('error');
+  checkConnections();
 });
 
 // Send message on button click or Enter
@@ -691,15 +936,12 @@ async function handleInteraction(prompt, typingEl, allowedTools) {
   }
 }
 
-// Initialize
-loadSavedKey();
+// Initialize with provider system
+loadProviderState();
 
 // ------------------------------------------------
 // YEREL AI (OLLAMA) — anahtarsız, sınırsız sohbet
 // ------------------------------------------------
-function getMode() {
-  return aiMode.value === 'cloud' ? 'cloud' : (aiMode.value === 'bridge' ? 'bridge' : 'local');
-}
 
 // Sohbet geçmişini Ollama formatına çevir
 function getLocalHistory(prompt) {
