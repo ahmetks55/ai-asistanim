@@ -79,8 +79,7 @@ const NARA_KEY = 'sk-nry-Sjg_ciKWNPY6IhrE47VA2VlMjSnNbkqN3J3hXfR32X4';
 const NARA_CHAT_URL = 'https://router.bynara.id/v1/chat/completions';
 const NARA_IMAGE_URL = 'https://api-images.bynara.id/v1/images/generations';
 const NARA_MODELS_CHAT = [
-  'mimo-v2.5-free', 'mimo-v2.5-pro-free',
-  'deepseek-v4.1-flash-free', 'glm-5.3-free', 'tencent-hy3-free'
+  'tencent-hy3-free', 'stepfun-3.7-flash', 'agnes-2.5-flash', 'agnes-3-flash', 'laguna-s-2.1'
 ];
 const NARA_MODELS_IMAGE = [
   'agnes-image-2.0-flash', 'agnes-image-2.1-flash',
