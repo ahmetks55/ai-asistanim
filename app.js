@@ -27,14 +27,14 @@ let apiKey = '';
 const PROVIDERS = {
   bridge: {
     name: 'Köpri', icon: '🏭', desc: 'Yönetici + Araçlar',
-    connected: true,
+    connected: true, active: true,
     models: [
       { id: 'bridge-auto', name: 'Otomatik (Yönetici)', desc: 'Yönetici en iyi aracı seçer', tag: 'free', type: 'local' }
     ]
   },
   nara: {
     name: 'NaraRouter', icon: '🧠', desc: 'Ücretsiz LLM',
-    connected: false,
+    connected: false, active: false,
     models: [
       { id: 'tencent-hy3-free', name: 'Tencent HY3', desc: 'Hızlı, ücretsiz', tag: 'free', type: 'free' },
       { id: 'stepfun-3.7-flash', name: 'StepFun 3.7 Flash', desc: 'Ücretsiz', tag: 'free', type: 'free' },
@@ -44,19 +44,19 @@ const PROVIDERS = {
   },
   gemini: {
     name: 'Gemini', icon: '✨', desc: 'Google AI',
-    connected: false,
+    connected: false, active: false,
     models: [
       { id: 'gemini-3.5-flash', name: 'Gemini 3.5 Flash', desc: 'Hızlı, ücretsiz kota', tag: 'free', type: 'free' }
     ]
   },
   ollama: {
     name: 'Ollama', icon: '🦙', desc: 'Yerel AI',
-    connected: false,
+    connected: false, active: false,
     models: []
   },
   pollinations: {
     name: 'Pollinations', icon: '🎨', desc: 'Görsel Üretimi',
-    connected: true,
+    connected: true, active: true,
     models: [
       { id: 'flux', name: 'Flux', desc: 'Ücretsiz görsel üretimi', tag: 'free', type: 'local' }
     ]
@@ -67,10 +67,22 @@ let currentProvider = 'bridge';
 let currentModel = 'bridge-auto';
 
 function loadProviderState() {
+  // Load active providers
+  const savedActive = localStorage.getItem('ai_active_providers');
+  if (savedActive) {
+    try {
+      const arr = JSON.parse(savedActive);
+      Object.keys(PROVIDERS).forEach(k => {
+        PROVIDERS[k].active = arr.includes(k);
+      });
+    } catch (e) {}
+  }
+  // Load current provider/model
   const saved = localStorage.getItem('ai_provider');
   if (saved && PROVIDERS[saved]) currentProvider = saved;
   const savedModel = localStorage.getItem('ai_model');
   if (savedModel) currentModel = savedModel;
+  // Load API keys
   const gKey = localStorage.getItem('gemini_auth_key');
   if (gKey) {
     PROVIDERS.gemini.connected = true;
@@ -81,17 +93,37 @@ function loadProviderState() {
   }
   const nKey = localStorage.getItem('nararouter_key');
   if (nKey) PROVIDERS.nara.connected = true;
+  // Sync checkboxes
+  document.querySelectorAll('.provider-check-input').forEach(cb => {
+    const pid = cb.dataset.provider;
+    if (PROVIDERS[pid]) cb.checked = PROVIDERS[pid].active;
+  });
   updateProviderUI();
   checkConnections();
+}
+
+function saveActiveProviders() {
+  const active = Object.entries(PROVIDERS).filter(([k, v]) => v.active).map(([k]) => k);
+  localStorage.setItem('ai_active_providers', JSON.stringify(active));
 }
 
 function updateProviderUI() {
   const p = PROVIDERS[currentProvider];
   providerIcon.textContent = p.icon;
   providerName.textContent = p.name;
+  // Show active providers in header
+  const activeList = Object.entries(PROVIDERS).filter(([k, v]) => v.active);
+  if (activeList.length > 1) {
+    providerName.textContent = activeList.map(([k, v]) => v.icon).join(' ');
+  }
   document.querySelectorAll('.provider-group').forEach(el => {
-    el.classList.toggle('active', el.dataset.provider === currentProvider);
-    el.classList.toggle('connected', PROVIDERS[el.dataset.provider]?.connected);
+    const pid = el.dataset.provider;
+    el.classList.toggle('active', pid === currentProvider);
+  });
+  // Sync checkboxes
+  document.querySelectorAll('.provider-check-input').forEach(cb => {
+    const pid = cb.dataset.provider;
+    if (PROVIDERS[pid]) cb.checked = PROVIDERS[pid].active;
   });
 }
 
@@ -139,20 +171,24 @@ async function checkConnections() {
     } catch (e) {}
   }
   updateProviderUI();
-  const parts = [];
-  if (PROVIDERS.bridge.connected) parts.push('🏭 Köpri');
-  if (PROVIDERS.nara.connected) parts.push('🧠 Nara');
-  if (PROVIDERS.gemini.connected) parts.push('✨ Gemini');
-  if (PROVIDERS.ollama.connected) parts.push('🦙 Ollama');
-  localStatus.textContent = parts.length ? '✓ ' + parts.join(' | ') : '⚠️ Bağlantı yok';
+  // Build status text from active providers
+  const activeProviders = Object.entries(PROVIDERS).filter(([k, v]) => v.active);
+  const parts = activeProviders.filter(([k, v]) => v.connected).map(([k, v]) => v.icon + ' ' + v.name);
+  localStatus.textContent = parts.length ? '✓ ' + parts.join(' + ') : '⚠️ Aktif sağlayıcı yok';
   localStatus.className = 'status ' + (parts.length ? 'ok' : 'error');
 }
 
 function getMode() {
-  if (currentProvider === 'bridge') return 'bridge';
-  if (currentProvider === 'ollama') return 'local';
-  if (currentProvider === 'gemini') return 'cloud';
+  // Return the primary active provider's mode
+  const activeProviders = Object.entries(PROVIDERS).filter(([k, v]) => v.active);
+  if (activeProviders.some(([k]) => k === 'bridge')) return 'bridge';
+  if (activeProviders.some(([k]) => k === 'ollama')) return 'local';
+  if (activeProviders.some(([k]) => k === 'gemini')) return 'cloud';
   return 'bridge';
+}
+
+function getActiveProviders() {
+  return Object.entries(PROVIDERS).filter(([k, v]) => v.active).map(([k]) => k);
 }
 
 // --- MODAL ---
@@ -171,12 +207,13 @@ function closeModal() {
 function renderModels() {
   const search = modelSearch.value.toLowerCase();
   modelList.innerHTML = '';
-  const providers = Object.entries(PROVIDERS);
-  for (const [pid, p] of providers) {
+  // Show models from ALL active providers
+  const activeProviders = Object.entries(PROVIDERS).filter(([k, v]) => v.active);
+  for (const [pid, p] of activeProviders) {
     const models = p.models.filter(m =>
       !search || m.name.toLowerCase().includes(search) || m.id.toLowerCase().includes(search) || m.desc.toLowerCase().includes(search)
     );
-    if (!models.length) continue;
+    if (!models.length && !search) continue;
     const hdr = document.createElement('div');
     hdr.className = 'model-item';
     hdr.style.cssText = 'background:rgba(255,255,255,0.03);cursor:default;font-weight:600;';
@@ -188,6 +225,34 @@ function renderModels() {
       el.innerHTML = '<div class="model-dot ' + m.type + '"></div><div class="model-info"><div class="model-name">' + m.name + '</div><div class="model-meta">' + m.desc + '</div></div><span class="model-tag ' + m.tag + '">' + m.tag + '</span>' + (m.id === currentModel ? '<span class="model-tag active-tag">aktif</span>' : '');
       el.addEventListener('click', () => selectModel(pid, m.id));
       modelList.appendChild(el);
+    }
+  }
+  // Also show inactive providers' models if searching
+  if (search) {
+    const inactiveProviders = Object.entries(PROVIDERS).filter(([k, v]) => !v.active);
+    for (const [pid, p] of inactiveProviders) {
+      const models = p.models.filter(m =>
+        m.name.toLowerCase().includes(search) || m.id.toLowerCase().includes(search) || m.desc.toLowerCase().includes(search)
+      );
+      if (!models.length) continue;
+      const hdr = document.createElement('div');
+      hdr.className = 'model-item';
+      hdr.style.cssText = 'background:rgba(255,255,255,0.02);cursor:default;font-weight:600;opacity:0.6;';
+      hdr.innerHTML = '<span style="font-size:16px">' + p.icon + '</span><div class="model-info"><div class="model-name">' + p.name + '</div><div class="model-meta">Pasif — açmak için soldaki tuşu açın</div></div>';
+      modelList.appendChild(hdr);
+      for (const m of models) {
+        const el = document.createElement('div');
+        el.className = 'model-item';
+        el.style.opacity = '0.5';
+        el.innerHTML = '<div class="model-dot ' + m.type + '"></div><div class="model-info"><div class="model-name">' + m.name + '</div><div class="model-meta">' + m.desc + '</div></div><span class="model-tag ' + m.tag + '">' + m.tag + '</span>';
+        el.addEventListener('click', () => {
+          PROVIDERS[pid].active = true;
+          document.querySelector('.provider-check-input[data-provider="' + pid + '"]').checked = true;
+          saveActiveProviders();
+          selectModel(pid, m.id);
+        });
+        modelList.appendChild(el);
+      }
     }
   }
   if (!modelList.children.length) {
@@ -254,8 +319,25 @@ providerModal.addEventListener('click', (e) => {
 });
 modelSearch.addEventListener('input', renderModels);
 
+// Toggle switch handlers
+document.querySelectorAll('.provider-check-input').forEach(cb => {
+  cb.addEventListener('change', (e) => {
+    e.stopPropagation();
+    const pid = cb.dataset.provider;
+    if (PROVIDERS[pid]) {
+      PROVIDERS[pid].active = cb.checked;
+      saveActiveProviders();
+      updateProviderUI();
+      renderModels();
+      applyMode(getMode());
+    }
+  });
+});
+
+// Provider group click — selects as primary
 document.querySelectorAll('.provider-group').forEach(el => {
-  el.addEventListener('click', () => {
+  el.addEventListener('click', (e) => {
+    if (e.target.classList.contains('provider-check-input') || e.target.classList.contains('toggle-slider')) return;
     const pid = el.dataset.provider;
     if (PROVIDERS[pid]) {
       currentProvider = pid;
