@@ -79,12 +79,8 @@ const NARA_KEY = 'sk-nry-Sjg_ciKWNPY6IhrE47VA2VlMjSnNbkqN3J3hXfR32X4';
 const NARA_CHAT_URL = 'https://router.bynara.id/v1/chat/completions';
 const NARA_IMAGE_URL = 'https://api-images.bynara.id/v1/images/generations';
 const NARA_MODELS_CHAT = [
-  'deepseek-v4-flash', 'deepseek-v4.1-flash', 'deepseek-v4.1-flash-free',
-  'tencent-hy3', 'tencent-hy4-preview',
-  'qwen3.8-flash', 'qwen3.8-flash-free', 'qwen3.8-27b',
-  'glm-5.3-flash', 'glm-5.3-free',
   'mimo-v2.5-free', 'mimo-v2.5-pro-free',
-  'stepfun-3.7-flash', 'mi-v2.5-free'
+  'deepseek-v4.1-flash-free', 'glm-5.3-free', 'tencent-hy3-free'
 ];
 const NARA_MODELS_IMAGE = [
   'agnes-image-2.0-flash', 'agnes-image-2.1-flash',
@@ -127,56 +123,11 @@ function naraChat(task, context, cb) {
   req.end();
 }
 
-// NaraRouter görsel üretim — baseUrl: https://api-images.bynara.id/v1/images/generations
+// NaraRouter görsel üretim — ücretsiz modeller henüz sınırlı, Pollinations tercih edilir
+// Ücretsiz görsel modelleri eklendiğinde buraya eklenecek
 function naraImage(prompt, cb) {
-  if (!NARA_KEY) return cb(new Error('NaraRouter anahtarı yok'));
-  const clean = cleanImagePrompt(prompt);
-  const body = JSON.stringify({ model: NARA_MODELS_IMAGE[0], prompt: clean, n: 1, size: '1024x1024' });
-  const url = new URL(NARA_IMAGE_URL);
-  const req = https.request({
-    hostname: url.hostname,
-    port: url.port || 443,
-    path: url.pathname,
-    method: 'POST',
-    headers: { 'Authorization': 'Bearer ' + NARA_KEY, 'Content-Type': 'application/json' },
-    timeout: 60000
-  }, (res) => {
-    let data = '';
-    res.on('data', (c) => { data += c; });
-    res.on('end', () => {
-      if (res.statusCode >= 400) {
-        console.log('[NaraRouter görsel] hata ' + res.statusCode + ': ' + data.slice(0, 200));
-        return cb(new Error('NaraRouter görsel hatası ' + res.statusCode));
-      }
-      try {
-        const j = JSON.parse(data);
-        const item = (j.data && j.data[0]) || {};
-        const imgUrl = item.url || item.b64_json;
-        if (!imgUrl) return cb(new Error('NaraRouter görsel URL/b64 yok'));
-        // b64 ise dosyaya yaz
-        if (item.b64_json) {
-          const file = path.join(OUTDIR, uniq('gorsel') + '.png');
-          fs.writeFileSync(file, Buffer.from(item.b64_json, 'base64'));
-          return cb(null, file);
-        }
-        // URL ise indir
-        const imgReq = https.get(imgUrl, { timeout: 25000 }, (imgRes) => {
-          if (imgRes.statusCode >= 400) return cb(new Error('NaraRouter görsel indirme hatası ' + imgRes.statusCode));
-          const ext = imgUrl.includes('.png') ? '.png' : '.jpg';
-          const file = path.join(OUTDIR, uniq('gorsel') + ext);
-          const f = fs.createWriteStream(file);
-          imgRes.pipe(f);
-          f.on('finish', () => cb(null, file));
-          f.on('error', (e) => cb(e));
-        });
-        imgReq.on('error', (e) => cb(e));
-      } catch (e) { cb(new Error('NaraRouter görsel parse hatası')); }
-    });
-  });
-  req.on('error', (e) => { console.log('[NaraRouter görsel] hata:', e.message); cb(e); });
-  req.on('timeout', () => req.destroy(new Error('timeout')));
-  req.write(body);
-  req.end();
+  // Şu an ücretsiz görsel modeli yok (agnes ücretli), Pollinations'e düş
+  return cb(new Error('NaraRouter ücretsiz görsel modeli yok'));
 }
 
 function fileUrl(fname) {
