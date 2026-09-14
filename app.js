@@ -27,14 +27,14 @@ let apiKey = '';
 const PROVIDERS = {
   bridge: {
     name: 'Köpri', icon: '🏭', desc: 'Yönetici + Araçlar',
-    connected: true, active: true,
+    connected: true, active: true, alwaysOn: true,
     models: [
       { id: 'bridge-auto', name: 'Otomatik (Yönetici)', desc: 'Yönetici en iyi aracı seçer', tag: 'free', type: 'local' }
     ]
   },
   nara: {
     name: 'NaraRouter', icon: '🧠', desc: 'Ücretsiz LLM',
-    connected: false, active: false,
+    connected: false, active: true, alwaysOn: true,
     models: [
       { id: 'tencent-hy3-free', name: 'Tencent HY3', desc: 'Hızlı, ücretsiz', tag: 'free', type: 'free' },
       { id: 'stepfun-3.7-flash', name: 'StepFun 3.7 Flash', desc: 'Ücretsiz', tag: 'free', type: 'free' },
@@ -44,19 +44,19 @@ const PROVIDERS = {
   },
   gemini: {
     name: 'Gemini', icon: '✨', desc: 'Google AI',
-    connected: false, active: false,
+    connected: false, active: false, alwaysOn: false,
     models: [
       { id: 'gemini-3.5-flash', name: 'Gemini 3.5 Flash', desc: 'Hızlı, ücretsiz kota', tag: 'free', type: 'free' }
     ]
   },
   ollama: {
     name: 'Ollama', icon: '🦙', desc: 'Yerel AI',
-    connected: false, active: false,
+    connected: false, active: false, alwaysOn: false,
     models: []
   },
   pollinations: {
     name: 'Pollinations', icon: '🎨', desc: 'Görsel Üretimi',
-    connected: true, active: true,
+    connected: true, active: true, alwaysOn: true,
     models: [
       { id: 'flux', name: 'Flux', desc: 'Ücretsiz görsel üretimi', tag: 'free', type: 'local' }
     ]
@@ -67,13 +67,15 @@ let currentProvider = 'bridge';
 let currentModel = 'bridge-auto';
 
 function loadProviderState() {
-  // Load active providers
+  // Load toggle state for non-alwaysOn providers (sadece Gemini ve Ollama)
   const savedActive = localStorage.getItem('ai_active_providers');
   if (savedActive) {
     try {
       const arr = JSON.parse(savedActive);
       Object.keys(PROVIDERS).forEach(k => {
-        PROVIDERS[k].active = arr.includes(k);
+        if (!PROVIDERS[k].alwaysOn) {
+          PROVIDERS[k].active = arr.includes(k);
+        }
       });
     } catch (e) {}
   }
@@ -82,19 +84,20 @@ function loadProviderState() {
   if (saved && PROVIDERS[saved]) currentProvider = saved;
   const savedModel = localStorage.getItem('ai_model');
   if (savedModel) currentModel = savedModel;
-  // Load API keys
+  // Load Gemini key
   const gKey = localStorage.getItem('gemini_auth_key');
   if (gKey) {
     PROVIDERS.gemini.connected = true;
+    PROVIDERS.gemini.active = true;
     apiKey = gKey;
     apiKeyInput.value = gKey;
     rememberKey.checked = true;
     keyStatus.textContent = '✓ Anahtar yüklendi';
   }
-  const nKey = localStorage.getItem('nararouter_key');
-  if (nKey) PROVIDERS.nara.connected = true;
-  // Sync checkboxes
-  document.querySelectorAll('.provider-check-input').forEach(cb => {
+  // NaraRouter key is in bridge-server.js (sunucu tarafı)
+  PROVIDERS.nara.connected = true;
+  // Sync checkboxes (only non-disabled ones)
+  document.querySelectorAll('.provider-check-input:not([disabled])').forEach(cb => {
     const pid = cb.dataset.provider;
     if (PROVIDERS[pid]) cb.checked = PROVIDERS[pid].active;
   });
@@ -275,34 +278,11 @@ function selectModel(providerId, modelId) {
 function renderConfig() {
   providerConfig.innerHTML = '';
   if (currentProvider === 'nara') {
-    const key = localStorage.getItem('nararouter_key') || '';
-    providerConfig.innerHTML = '<div class="config-row"><label>API Key</label><input type="password" id="naraKeyInput" placeholder="sk-nry-..." value="' + key + '"><button id="naraKeySave">Kaydet</button></div><div class="config-status" id="naraKeyStatus">' + (PROVIDERS.nara.connected ? '✓ Bağlı' : '') + '</div>';
+    providerConfig.innerHTML = '<div class="config-row"><label>Durum</label><span style="color:' + (PROVIDERS.nara.connected ? '#4ade80' : '#ef4444') + ';font-size:12px">' + (PROVIDERS.nara.connected ? '✓ Anahtar sunucuda (bridge-server.js)' : '✗ NaraRouter anahtarı yok — bridge-server.js\'e ekleyin') + '</span></div>';
     providerConfig.classList.add('visible');
-    document.getElementById('naraKeySave').addEventListener('click', () => {
-      const v = document.getElementById('naraKeyInput').value.trim();
-      if (v) {
-        localStorage.setItem('nararouter_key', v);
-        PROVIDERS.nara.connected = true;
-        document.getElementById('naraKeyStatus').textContent = '✓ Kaydedildi';
-        document.getElementById('naraKeyStatus').className = 'config-status';
-        checkConnections();
-      }
-    });
   } else if (currentProvider === 'gemini') {
-    const key = localStorage.getItem('gemini_auth_key') || '';
-    providerConfig.innerHTML = '<div class="config-row"><label>API Key</label><input type="password" id="geminiKeyInput" placeholder="AQ..." value="' + key + '"><button id="geminiKeySave">Kaydet</button></div><div class="config-status" id="geminiKeyStatus">' + (PROVIDERS.gemini.connected ? '✓ Bağlı' : '') + '</div>';
+    providerConfig.innerHTML = '<div class="config-row"><label>Durum</label><span style="color:' + (PROVIDERS.gemini.connected ? '#4ade80' : '#ef4444') + ';font-size:12px">' + (PROVIDERS.gemini.connected ? '✓ Anahtar sunucuda (bridge-server.js)' : '✗ Gemini anahtarı yok — bridge-server.js\'e ekleyin') + '</span></div>';
     providerConfig.classList.add('visible');
-    document.getElementById('geminiKeySave').addEventListener('click', () => {
-      const v = document.getElementById('geminiKeyInput').value.trim();
-      if (v) {
-        localStorage.setItem('gemini_auth_key', v);
-        apiKey = v;
-        PROVIDERS.gemini.connected = true;
-        document.getElementById('geminiKeyStatus').textContent = '✓ Kaydedildi';
-        document.getElementById('geminiKeyStatus').className = 'config-status';
-        checkConnections();
-      }
-    });
   } else if (currentProvider === 'ollama') {
     providerConfig.innerHTML = '<div class="config-row"><label>Durum</label><span style="color:' + (PROVIDERS.ollama.connected ? '#4ade80' : '#ef4444') + ';font-size:12px">' + (PROVIDERS.ollama.connected ? '✓ Ollama çalışıyor (' + PROVIDERS.ollama.models.length + ' model)' : '✗ Ollama bulunamadı') + '</span></div>';
     providerConfig.classList.add('visible');
@@ -319,13 +299,22 @@ providerModal.addEventListener('click', (e) => {
 });
 modelSearch.addEventListener('input', renderModels);
 
-// Toggle switch handlers
-document.querySelectorAll('.provider-check-input').forEach(cb => {
+// --- EVENTS ---
+providerBtn.addEventListener('click', openModal);
+modalClose.addEventListener('click', closeModal);
+providerModal.addEventListener('click', (e) => {
+  if (e.target === providerModal) closeModal();
+});
+modelSearch.addEventListener('input', renderModels);
+
+// Toggle switch handlers (sadece Gemini ve Ollama)
+document.querySelectorAll('.provider-check-input:not([disabled])').forEach(cb => {
   cb.addEventListener('change', (e) => {
     e.stopPropagation();
     const pid = cb.dataset.provider;
     if (PROVIDERS[pid]) {
       PROVIDERS[pid].active = cb.checked;
+      if (pid === 'gemini' && cb.checked) PROVIDERS.gemini.connected = true;
       saveActiveProviders();
       updateProviderUI();
       renderModels();
@@ -436,9 +425,11 @@ saveKeyBtn.addEventListener('click', () => {
   if (rememberKey.checked) {
     localStorage.setItem('gemini_auth_key', apiKey);
     PROVIDERS.gemini.connected = true;
+    PROVIDERS.gemini.active = true;
   } else {
     localStorage.removeItem('gemini_auth_key');
     PROVIDERS.gemini.connected = false;
+    PROVIDERS.gemini.active = false;
   }
   keyStatus.textContent = '✓ Anahtar kaydedildi';
   keyStatus.classList.remove('error');
@@ -1187,12 +1178,11 @@ async function handleBridgeTask(task, typingEl) {
   const data = await res.json();
   typingEl.remove();
 
-  // Yönetici bu görevi ücretsiz araçlara yönlendiremedi → beyne (NaraRouter/Gemini) otomatik devreder.
+  // Yönetici bu görevi ücretsiz araçlara yönlendiremedi → beyni köprüde halledilir
   if (data.status === 'needs_brain') {
-    addMessage('🤖 **Yönetici:** bu görev ücretsiz araç değil, sohbet beyni gerektiriyor. Beyne devrediyorum…', 'bot');
+    addMessage('🤖 **Yönetici:** beyni çalıştırılıyor…', 'bot');
     const brainEl = addMessage('🧠 Sohbet beyni çalışıyor...', 'bot');
     brainEl.classList.add('typing');
-    // Önce NaraRouter dene, başarısızsa Gemini'ye düş
     try {
       const naraRes = await fetch('http://localhost:8788/brain', {
         method: 'POST',
@@ -1206,20 +1196,10 @@ async function handleBridgeTask(task, typingEl) {
         return;
       }
     } catch (e) {
-      console.log('NaraRouter beyin hatası:', e.message);
+      console.log('Köprü beyin hatası:', e.message);
     }
-    // NaraRouter başarısızsa Gemini'ye düş
-    if (apiKey) {
-      try {
-        await handleInteraction(task, brainEl, TOOLS);
-      } catch (e) {
-        brainEl.remove();
-        addMessage('⚠️ Beyin hatası: ' + e.message, 'bot');
-      }
-    } else {
-      brainEl.remove();
-      addMessage('Beyni çalıştırmak için üstteki karta Gemini anahtarını girin (ücretsiz ~20 sohbet/gün) veya **Bulut** modunu seçip aynı isteği yapın.', 'bot');
-    }
+    brainEl.remove();
+    addMessage('⚠️ Beyni çalıştıramadım. NaraRouter ve Gemini bağlantınızı kontrol edin.', 'bot');
     return;
   }
 

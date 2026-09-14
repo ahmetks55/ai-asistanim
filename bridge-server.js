@@ -76,6 +76,7 @@ function uniq(prefix) {
 // NARAROUTER ENTEGRASYONU — Tüm ücretsiz modeller tek noktadan
 // ---------------------------------------------------------------
 const NARA_KEY = 'sk-nry-Sjg_ciKWNPY6IhrE47VA2VlMjSnNbkqN3J3hXfR32X4';
+const GEMINI_KEY = 'AIzaSyCtJcX9DQ4llHoLBkHTWqwuLjnWDlf4UbI';
 const NARA_CHAT_URL = 'https://router.bynara.id/v1/chat/completions';
 const NARA_IMAGE_URL = 'https://api-images.bynara.id/v1/images/generations';
 const NARA_MODELS_CHAT = [
@@ -117,6 +118,53 @@ function naraChat(task, context, cb) {
     });
   });
   req.on('error', (e) => { console.log('[NaraRouter beyin] hata:', e.message); cb(null, null); });
+  req.on('timeout', () => req.destroy(new Error('timeout')));
+  req.write(body);
+  req.end();
+}
+
+// Gemini beyin (chat completions) — baseUrl: https://generativelanguage.googleapis.com/v1beta
+function geminiChat(task, context, cb) {
+  if (!GEMINI_KEY) return cb(new Error('Gemini anahtarı yapılandırılmamış'));
+  const system = 'Sen Türkçe konuşan yardımsever ve detaylı bir AI asistanısın. Cevapların Türkçe, açıklayıcı ve kapsamlı olsun.';
+  const historyParts = [];
+  historyParts.push('Kullanıcı: ' + task);
+  const inputText = historyParts.join('\n');
+
+  const body = JSON.stringify({
+    model: 'gemini-3.5-flash',
+    input: inputText,
+    system_instruction: system
+  });
+
+  const req = https.request({
+    hostname: 'generativelanguage.googleapis.com',
+    port: 443,
+    path: `/v1beta/models/gemini-3.5-flash:generateContent?key=${GEMINI_KEY}`,
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    timeout: 30000
+  }, (res) => {
+    let data = '';
+    res.on('data', (c) => { data += c; });
+    res.on('end', () => {
+      if (res.statusCode >= 400) {
+        console.log('[Gemini beyin] hata ' + res.statusCode + ': ' + data.slice(0, 200));
+        return cb(new Error('Gemini HTTP ' + res.statusCode));
+      }
+      try {
+        const j = JSON.parse(data);
+        const text = (j.output_text || (j.candidates && j.candidates[0] && j.candidates[0].content && j.candidates[0].content.parts && j.candidates[0].content.parts[0] && j.candidates[0].content.parts[0].text) || '').trim();
+        cb(null, text || null);
+      } catch (e) {
+        console.log('[Gemini beyin] parse hatası:', e.message);
+        cb(new Error('Gemini yanıt ayrıştırılamadı'));
+      }
+    });
+  });
+  req.on('error', (e) => { console.log('[Gemini beyin] hata:', e.message); cb(e); });
   req.on('timeout', () => req.destroy(new Error('timeout')));
   req.write(body);
   req.end();
@@ -571,8 +619,26 @@ const server = http.createServer((req, res) => {
   if (req.method === 'GET' && req.url === '/models') return send(res, 200, {
     tools: ['image', 'scenes', 'speak', 'run_code', 'result', 'search'],
     admin: !!ADMIN.admin,
-    nara: { key: !!NARA_KEY, chat: NARA_MODELS_CHAT, image: NARA_MODELS_IMAGE }
+    nara: { key: !!NARA_KEY, chat: NARA_MODELS_CHAT, image: NARA_MODELS_IMAGE },
+    gemini: { key: !!GEMINI_KEY, model: GEMINI_MODEL }
   }, origin);
+
+  // Gemini beyin proxy — POST /gemini { task, context }
+  if (req.method === 'POST' && req.url === '/gemini') {
+    let body = '';
+    req.on('data', (c) => { body += c; if (Buffer.byteLength(body, 'utf8') > 1048576) body = ''; });
+    req.on('end', () => {
+      let task = '', context = '';
+      try { const p = JSON.parse(body); task = p.task || ''; context = p.context || ''; } catch (e) { task = body; }
+      if (!task) return send(res, 400, { error: 'Görev boş' }, origin);
+      if (!GEMINI_KEY) return send(res, 200, { status: 'needs_brain', reason: 'Gemini anahtarı yok' }, origin);
+      geminiChat(task, context, (err, text) => {
+        if (err || !text) return send(res, 200, { status: 'needs_brain', reason: 'Gemini yanıt vermedi: ' + (err || 'bilinmeyen') }, origin);
+        send(res, 200, { status: 'done', plan: ['gemini'], results: [{ type: 'brain', text }] }, origin);
+      });
+    });
+    return;
+  }
 
   // NaraRouter beyin — POST /brain { task, context }
   if (req.method === 'POST' && req.url === '/brain') {
@@ -583,8 +649,12 @@ const server = http.createServer((req, res) => {
       try { const p = JSON.parse(body); task = p.task || ''; context = p.context || ''; } catch (e) { task = body; }
       if (!task) return send(res, 400, { error: 'Görev boş' }, origin);
       naraChat(task, context, (err, text) => {
-        if (err || !text) return send(res, 200, { status: 'needs_brain', reason: 'NaraRouter yanıt vermedi' }, origin);
-        send(res, 200, { status: 'done', plan: ['nara'], results: [{ type: 'brain', text }] }, origin);
+        if (!err && text) return send(res, 200, { status: 'done', plan: ['nara'], results: [{ type: 'brain', text }] }, origin);
+        // NaraRouter başarısızsa sunucu tarafındaki Gemini'ye düş
+        geminiChat(task, context, (gErr, geminiText) => {
+          if (gErr || !geminiText) return send(res, 200, { status: 'needs_brain', reason: 'NaraRouter ve Gemini yanıt vermedi' }, origin);
+          send(res, 200, { status: 'done', plan: ['gemini'], results: [{ type: 'brain', text: geminiText }] }, origin);
+        });
       });
     });
     return;
