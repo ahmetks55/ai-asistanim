@@ -1,0 +1,7 @@
+Yönetici köprü: http://localhost:8788
+Dosyalar: C:\Users\ASUS\ai-web-tool\bridge_output
+[görsel] istenen: "bir kedi çiz ve hakkında bilgi ver" -> flux prompt: "kedi ve hakkında bilgi" seed: 867906443
+[görsel] NaraRouter başarısız, Pollinations'e düşülüyor: NaraRouter ücretsiz görsel modeli yok
+[NaraRouter beyin] hata: timeout
+[NaraRouter beyin] hata: timeout
+[NaraRouter beyin] hata: timeout
