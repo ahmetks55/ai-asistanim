@@ -863,11 +863,28 @@ async function handleBridgeTask(task, typingEl) {
   const data = await res.json();
   typingEl.remove();
 
-  // Yönetici bu görevi ücretsiz araçlara yönlendiremedi → beyne (Gemini) otomatik devreder.
+  // Yönetici bu görevi ücretsiz araçlara yönlendiremedi → beyne (NaraRouter/Gemini) otomatik devreder.
   if (data.status === 'needs_brain') {
     addMessage('🤖 **Yönetici:** bu görev ücretsiz araç değil, sohbet beyni gerektiriyor. Beyne devrediyorum…', 'bot');
     const brainEl = addMessage('🧠 Sohbet beyni çalışıyor...', 'bot');
     brainEl.classList.add('typing');
+    // Önce NaraRouter dene, başarısızsa Gemini'ye düş
+    try {
+      const naraRes = await fetch('http://localhost:8788/brain', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ task: task, context: lastBotText(task) })
+      });
+      const naraData = await naraRes.json();
+      if (naraData.status === 'done' && naraData.results && naraData.results[0] && naraData.results[0].text) {
+        brainEl.remove();
+        addMessage(naraData.results[0].text, 'bot');
+        return;
+      }
+    } catch (e) {
+      console.log('NaraRouter beyin hatası:', e.message);
+    }
+    // NaraRouter başarısızsa Gemini'ye düş
     if (apiKey) {
       try {
         await handleInteraction(task, brainEl, TOOLS);
@@ -910,6 +927,8 @@ async function handleBridgeTask(task, typingEl) {
       addMessage('🔍 **Arama sonucu:**\n' + (r.text || r.error || ''), 'bot');
     } else if (r.type === 'admin') {
       addMessage('🧠 **Yönetici (admin CLI) çıktısı:**\n' + (r.text || ''), 'bot');
+    } else if (r.type === 'brain') {
+      addMessage(r.text || '', 'bot');
     } else if (r.error) {
       addMessage('⚠️ **' + r.type + ' hatası:** ' + r.error, 'bot');
     }

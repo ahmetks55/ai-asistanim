@@ -72,6 +72,113 @@ function uniq(prefix) {
   return prefix + '_' + Date.now() + '_' + Math.floor(Math.random() * 1000);
 }
 
+// ---------------------------------------------------------------
+// NARAROUTER ENTEGRASYONU — Tüm ücretsiz modeller tek noktadan
+// ---------------------------------------------------------------
+const NARA_KEY = 'sk-nry-Sjg_ciKWNPY6IhrE47VA2VlMjSnNbkqN3J3hXfR32X4';
+const NARA_CHAT_URL = 'https://router.bynara.id/v1/chat/completions';
+const NARA_IMAGE_URL = 'https://api-images.bynara.id/v1/images/generations';
+const NARA_MODELS_CHAT = [
+  'deepseek-v4-flash', 'deepseek-v4.1-flash', 'deepseek-v4.1-flash-free',
+  'tencent-hy3', 'tencent-hy4-preview',
+  'qwen3.8-flash', 'qwen3.8-flash-free', 'qwen3.8-27b',
+  'glm-5.3-flash', 'glm-5.3-free',
+  'mimo-v2.5-free', 'mimo-v2.5-pro-free',
+  'stepfun-3.7-flash', 'mi-v2.5-free'
+];
+const NARA_MODELS_IMAGE = [
+  'agnes-image-2.0-flash', 'agnes-image-2.1-flash',
+  'grok-imagine', 'nano-banana-pro'
+];
+
+// NaraRouter beyin (chat completions) — baseUrl: https://router.bynara.id/v1
+function naraChat(task, context, cb) {
+  if (!NARA_KEY) return cb(null, null);
+  const msgs = [];
+  if (context) msgs.push({ role: 'system', content: 'Sen yardımcı bir asistansın. Kullanıcının dilinde doğal ve kısa cevap ver.' });
+  msgs.push({ role: 'user', content: task });
+  const body = JSON.stringify({ model: NARA_MODELS_CHAT[0], messages: msgs, max_tokens: 1024 });
+  const url = new URL(NARA_CHAT_URL);
+  const req = https.request({
+    hostname: url.hostname,
+    port: url.port || 443,
+    path: url.pathname,
+    method: 'POST',
+    headers: { 'Authorization': 'Bearer ' + NARA_KEY, 'Content-Type': 'application/json' },
+    timeout: 30000
+  }, (res) => {
+    let data = '';
+    res.on('data', (c) => { data += c; });
+    res.on('end', () => {
+      if (res.statusCode >= 400) {
+        console.log('[NaraRouter beyin] hata ' + res.statusCode + ': ' + data.slice(0, 200));
+        return cb(null, null);
+      }
+      try {
+        const j = JSON.parse(data);
+        const text = (j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content) || '';
+        cb(null, text.trim() || null);
+      } catch (e) { cb(null, null); }
+    });
+  });
+  req.on('error', (e) => { console.log('[NaraRouter beyin] hata:', e.message); cb(null, null); });
+  req.on('timeout', () => req.destroy(new Error('timeout')));
+  req.write(body);
+  req.end();
+}
+
+// NaraRouter görsel üretim — baseUrl: https://api-images.bynara.id/v1/images/generations
+function naraImage(prompt, cb) {
+  if (!NARA_KEY) return cb(new Error('NaraRouter anahtarı yok'));
+  const clean = cleanImagePrompt(prompt);
+  const body = JSON.stringify({ model: NARA_MODELS_IMAGE[0], prompt: clean, n: 1, size: '1024x1024' });
+  const url = new URL(NARA_IMAGE_URL);
+  const req = https.request({
+    hostname: url.hostname,
+    port: url.port || 443,
+    path: url.pathname,
+    method: 'POST',
+    headers: { 'Authorization': 'Bearer ' + NARA_KEY, 'Content-Type': 'application/json' },
+    timeout: 60000
+  }, (res) => {
+    let data = '';
+    res.on('data', (c) => { data += c; });
+    res.on('end', () => {
+      if (res.statusCode >= 400) {
+        console.log('[NaraRouter görsel] hata ' + res.statusCode + ': ' + data.slice(0, 200));
+        return cb(new Error('NaraRouter görsel hatası ' + res.statusCode));
+      }
+      try {
+        const j = JSON.parse(data);
+        const item = (j.data && j.data[0]) || {};
+        const imgUrl = item.url || item.b64_json;
+        if (!imgUrl) return cb(new Error('NaraRouter görsel URL/b64 yok'));
+        // b64 ise dosyaya yaz
+        if (item.b64_json) {
+          const file = path.join(OUTDIR, uniq('gorsel') + '.png');
+          fs.writeFileSync(file, Buffer.from(item.b64_json, 'base64'));
+          return cb(null, file);
+        }
+        // URL ise indir
+        const imgReq = https.get(imgUrl, { timeout: 25000 }, (imgRes) => {
+          if (imgRes.statusCode >= 400) return cb(new Error('NaraRouter görsel indirme hatası ' + imgRes.statusCode));
+          const ext = imgUrl.includes('.png') ? '.png' : '.jpg';
+          const file = path.join(OUTDIR, uniq('gorsel') + ext);
+          const f = fs.createWriteStream(file);
+          imgRes.pipe(f);
+          f.on('finish', () => cb(null, file));
+          f.on('error', (e) => cb(e));
+        });
+        imgReq.on('error', (e) => cb(e));
+      } catch (e) { cb(new Error('NaraRouter görsel parse hatası')); }
+    });
+  });
+  req.on('error', (e) => { console.log('[NaraRouter görsel] hata:', e.message); cb(e); });
+  req.on('timeout', () => req.destroy(new Error('timeout')));
+  req.write(body);
+  req.end();
+}
+
 function fileUrl(fname) {
   return 'http://localhost:' + PORT + '/goruntu/' + encodeURIComponent(fname);
 }
@@ -144,12 +251,24 @@ function promptHash(p) {
   for (const c of String(p)) h = (h * 31 + c.codePointAt(0)) | 0;
   return (Math.abs(h) % 2147483647) + 1;
 }
-// Görsel üretimi (Pollinations) — deterministik: aynı prompt aynı seed → aynı görsel.
-// Yeni gen endpoint'i denenir; eski endpoint'e otomatik düşer.
+// Görsel üretimi — NaraRouter primero, Pollinations fallback
+// Deterministik: aynı prompt aynı seed → aynı görsel.
 function imageFromPrompt(prompt, cb, attempt) {
   const clean = cleanImagePrompt(prompt);
   const seed = promptHash(clean);
   console.log('[görsel] istenen:', JSON.stringify(String(prompt)), '-> flux prompt:', JSON.stringify(clean), 'seed:', seed);
+  attempt = attempt || 0;
+  // Önce NaraRouter dene
+  if (NARA_KEY) {
+    return naraImage(prompt, (nErr, file) => {
+      if (!nErr && file) return cb(null, file);
+      console.log('[görsel] NaraRouter başarısız, Pollinations\'e düşülüyor:', nErr ? nErr.message : 'dosya yok');
+      pollinationsImage(clean, seed, cb, attempt);
+    });
+  }
+  pollinationsImage(clean, seed, cb, attempt);
+}
+function pollinationsImage(clean, seed, cb, attempt) {
   attempt = attempt || 0;
   const enc = encodeURIComponent(clean.slice(0, 300));
   const urls = [
@@ -161,8 +280,8 @@ function imageFromPrompt(prompt, cb, attempt) {
     const req = https.get(urls[idx], { timeout: 25000 }, (r) => {
       if (r.statusCode >= 400) {
         req.destroy();
-        if (idx === 0) return tryUrl(1); // yeni endpoint çalışmadı, eskiye düş
-        if (attempt < 1) return setTimeout(() => imageFromPrompt(prompt, cb, attempt + 1), 1500);
+        if (idx === 0) return tryUrl(1);
+        if (attempt < 1) return setTimeout(() => pollinationsImage(clean, seed, cb, attempt + 1), 1500);
         return cb(new Error('Görsel servisi ' + r.statusCode));
       }
       const f = fs.createWriteStream(file);
@@ -172,7 +291,7 @@ function imageFromPrompt(prompt, cb, attempt) {
         try { st = fs.statSync(file); } catch (e) { st = { size: 0 }; }
         if (st.size < 1024) {
           try { fs.unlinkSync(file); } catch (e) {}
-          if (attempt < 1) return setTimeout(() => imageFromPrompt(prompt, cb, attempt + 1), 1500);
+          if (attempt < 1) return setTimeout(() => pollinationsImage(clean, seed, cb, attempt + 1), 1500);
           return cb(new Error('Görsel boş döndü (doğrulama başarısız)'));
         }
         cb(null, file);
@@ -182,7 +301,7 @@ function imageFromPrompt(prompt, cb, attempt) {
     req.on('timeout', () => req.destroy(new Error('Görsel üretimi zaman aşımı')));
     req.on('error', (e) => {
       if (idx === 0) return tryUrl(1);
-      if (attempt < 1) return setTimeout(() => imageFromPrompt(prompt, cb, attempt + 1), 1500);
+      if (attempt < 1) return setTimeout(() => pollinationsImage(clean, seed, cb, attempt + 1), 1500);
       cb(e);
     });
   };
@@ -499,7 +618,27 @@ const server = http.createServer((req, res) => {
   }
   if (req.method === 'OPTIONS') return send(res, 204, {}, origin);
   if (req.method === 'GET' && req.url === '/health') return send(res, 200, { ok: true, tool: 'yönetici-köprü' }, origin);
-  if (req.method === 'GET' && req.url === '/models') return send(res, 200, { tools: ['image', 'scenes', 'speak', 'run_code', 'result', 'search'], admin: !!ADMIN.admin }, origin);
+  if (req.method === 'GET' && req.url === '/models') return send(res, 200, {
+    tools: ['image', 'scenes', 'speak', 'run_code', 'result', 'search'],
+    admin: !!ADMIN.admin,
+    nara: { key: !!NARA_KEY, chat: NARA_MODELS_CHAT, image: NARA_MODELS_IMAGE }
+  }, origin);
+
+  // NaraRouter beyin — POST /brain { task, context }
+  if (req.method === 'POST' && req.url === '/brain') {
+    let body = '';
+    req.on('data', (c) => { body += c; if (Buffer.byteLength(body, 'utf8') > 1048576) body = ''; });
+    req.on('end', () => {
+      let task = '', context = '';
+      try { const p = JSON.parse(body); task = p.task || ''; context = p.context || ''; } catch (e) { task = body; }
+      if (!task) return send(res, 400, { error: 'Görev boş' }, origin);
+      naraChat(task, context, (err, text) => {
+        if (err || !text) return send(res, 200, { status: 'needs_brain', reason: 'NaraRouter yanıt vermedi' }, origin);
+        send(res, 200, { status: 'done', plan: ['nara'], results: [{ type: 'brain', text }] }, origin);
+      });
+    });
+    return;
+  }
 
   // Görsel/metin dosyasını tarayıcıya servis et: /goruntu/gorsel_123.jpg
   if (req.method === 'GET' && req.url.startsWith('/goruntu/')) {
