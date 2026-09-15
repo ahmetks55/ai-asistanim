@@ -4,7 +4,6 @@ const userInput = document.getElementById('userInput');
 const sendBtn = document.getElementById('sendBtn');
 const brainSelect = document.getElementById('brainSelect');
 
-const PROXY = 'https://corsproxy.io/?url=';
 let chatHistory = [];
 let nvidiaKey = localStorage.getItem('nvidia_key') || '';
 let naraKey = localStorage.getItem('nara_key') || '';
@@ -41,17 +40,46 @@ function addMessage(text, sender) {
   return div;
 }
 
-async function callAPI(url, body, headers) {
-  const r = await fetch(PROXY + encodeURIComponent(url), {
+async function callNvidia(task, context) {
+  const msgs = [];
+  if (context) msgs.push({ role: 'system', content: context });
+  msgs.push({ role: 'user', content: task });
+  const r = await fetch('https://integrate.api.nvidia.com/v1/chat/completions', {
     method: 'POST',
-    headers: { ...headers, 'Content-Type': 'application/json' },
-    body: JSON.stringify(body)
+    headers: { 'Authorization': 'Bearer ' + nvidiaKey, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ model: 'deepseek-ai/deepseek-v4-flash-0731', messages: msgs, max_tokens: 1024 })
   });
-  if (!r.ok) {
-    const err = await r.text().catch(() => '');
-    throw new Error('HTTP ' + r.status + ': ' + err.slice(0, 100));
-  }
-  return r.json();
+  const d = await r.json();
+  if (d.choices?.[0]?.message?.content) return d.choices[0].message.content;
+  throw new Error(d.error?.message || 'NVIDIA yanıt vermedi');
+}
+
+async function callNara(task, context) {
+  const msgs = [];
+  if (context) msgs.push({ role: 'system', content: context });
+  msgs.push({ role: 'user', content: task });
+  const r = await fetch('https://router.bynara.id/v1/chat/completions', {
+    method: 'POST',
+    headers: { 'Authorization': 'Bearer ' + naraKey, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ model: 'tencent-hy3-free', messages: msgs, max_tokens: 1024 })
+  });
+  const d = await r.json();
+  if (d.choices?.[0]?.message?.content) return d.choices[0].message.content;
+  throw new Error(d.error?.message || 'NaraRouter yanıt vermedi');
+}
+
+async function callAirforce(task, context) {
+  const msgs = [];
+  if (context) msgs.push({ role: 'system', content: context });
+  msgs.push({ role: 'user', content: task });
+  const r = await fetch('https://api.airforce/v1/chat/completions', {
+    method: 'POST',
+    headers: { 'Authorization': 'Bearer ' + airforceKey, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ model: 'mimo-v2.5-pro', messages: msgs, max_tokens: 1024 })
+  });
+  const d = await r.json();
+  if (d.choices?.[0]?.message?.content) return d.choices[0].message.content;
+  throw new Error(d.error?.message || 'Airforce yanıt vermedi');
 }
 
 async function send() {
@@ -70,33 +98,23 @@ async function send() {
   typing.classList.add('typing');
 
   const context = chatHistory.map(m => m.role + ': ' + m.content).join('\n');
-  const msgs = [];
-  if (context) msgs.push({ role: 'system', content: context });
-  msgs.push({ role: 'user', content: text });
 
   try {
-    let data;
-    if (brain === 'nvidia') {
-      data = await callAPI('https://integrate.api.nvidia.com/v1/chat/completions', {
-        model: 'deepseek-ai/deepseek-v4-flash-0731', messages: msgs, max_tokens: 1024
-      }, { 'Authorization': 'Bearer ' + nvidiaKey });
-    } else if (brain === 'nara') {
-      data = await callAPI('https://router.bynara.id/v1/chat/completions', {
-        model: 'tencent-hy3-free', messages: msgs, max_tokens: 1024
-      }, { 'Authorization': 'Bearer ' + naraKey });
-    } else {
-      data = await callAPI('https://api.airforce/v1/chat/completions', {
-        model: 'mimo-v2.5-pro', messages: msgs, max_tokens: 1024
-      }, { 'Authorization': 'Bearer ' + airforceKey });
-    }
+    let reply;
+    if (brain === 'nvidia') reply = await callNvidia(text, context);
+    else if (brain === 'nara') reply = await callNara(text, context);
+    else reply = await callAirforce(text, context);
     typing.remove();
-    const reply = data.choices?.[0]?.message?.content || 'Yanıt alınamadı.';
     addMessage(reply, 'bot');
     chatHistory.push({ role: 'user', content: text });
     chatHistory.push({ role: 'assistant', content: reply });
   } catch(e) {
     typing.remove();
-    addMessage('Hata: ' + e.message, 'bot');
+    if (e.message.includes('Failed to fetch') || e.message.includes('NetworkError')) {
+      addMessage('CORS engellendi. Bu API tarayıcıdan doğrudan çalışmaz. Köprü sunucu gerekir.', 'bot');
+    } else {
+      addMessage('Hata: ' + e.message, 'bot');
+    }
   }
   sendBtn.disabled = false;
 }
