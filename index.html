@@ -80,6 +80,59 @@
           <optgroup label="Scaleway (Ücretsiz)">
             <option value="scaleway:llama-3.3-70b-instruct">Llama 3.3 70B</option>
           </optgroup>
+          <optgroup label="Together AI (Deneme)">
+            <option value="together:meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo">Llama 3.1 8B</option>
+            <option value="together:meta-llama/Meta-Llama-3.3-70B-Instruct-Turbo">Llama 3.3 70B</option>
+            <option value="together:deepseek-ai/DeepSeek-V3">DeepSeek V3</option>
+          </optgroup>
+          <optgroup label="Fireworks AI (Deneme)">
+            <option value="fireworks:accounts/fireworks/models/llama-v3p3-70b-instruct">Llama 3.3 70B</option>
+            <option value="fireworks:accounts/fireworks/models/deepseek-v3">DeepSeek V3</option>
+          </optgroup>
+          <optgroup label="DeepInfra (Deneme)">
+            <option value="deepinfra:meta-llama/Meta-Llama-3.1-8B-Instruct">Llama 3.1 8B</option>
+            <option value="deepinfra:meta-llama/Meta-Llama-3.3-70B-Instruct">Llama 3.3 70B</option>
+          </optgroup>
+          <optgroup label="Novita AI (Deneme)">
+            <option value="novita:deepseek/deepseek-v3-0324">DeepSeek V3</option>
+            <option value="novita:meta-llama/llama-3.3-70b-instruct">Llama 3.3 70B</option>
+          </optgroup>
+          <optgroup label="AI21 Labs (Deneme)">
+            <option value="ai21:jamba-1.5-large">Jamba 1.5 Large</option>
+            <option value="ai21:jamba-1.5-mini">Jamba 1.5 Mini</option>
+          </optgroup>
+          <optgroup label="Upstage (Deneme)">
+            <option value="upstage:solar-pro-2102">Solar Pro 2</option>
+          </optgroup>
+          <optgroup label="Reka (Deneme)">
+            <option value="reka:reka-flash-20240226">Reka Flash</option>
+            <option value="reka:reka-core-20240904">Reka Core</option>
+          </optgroup>
+          <optgroup label="Nebius (Deneme)">
+            <option value="nebius:meta-llama/Meta-Llama-3.1-8B-Instruct">Llama 3.1 8B</option>
+            <option value="nebius:Qwen/Qwen2.5-72B-Instruct">Qwen 2.5 72B</option>
+          </optgroup>
+          <optgroup label="Baseten (Deneme)">
+            <option value="baseten:meta-llama/Meta-Llama-3.1-8B-Instruct">Llama 3.1 8B</option>
+          </optgroup>
+          <optgroup label="SambaNova (Deneme)">
+            <option value="sambanova:Meta-Llama-3.3-70B-Instruct">Llama 3.3 70B</option>
+          </optgroup>
+          <optgroup label="Fireworks AI (Deneme)">
+            <option value="fireworks:accounts/fireworks/models/llama-v3p3-70b-instruct">Llama 3.3 70B</option>
+          </optgroup>
+          <optgroup label="xAI Grok (Deneme)">
+            <option value="xai:grok-2-latest">Grok 2</option>
+          </optgroup>
+          <optgroup label="Perplexity (Deneme)">
+            <option value="perplexity:sonar-pro">Sonar Pro</option>
+          </optgroup>
+          <optgroup label="OpenAI (Deneme)">
+            <option value="openai:gpt-4o-mini">GPT-4o Mini</option>
+          </optgroup>
+          <optgroup label="Anthropic (Deneme)">
+            <option value="anthropic:claude-3-5-haiku-20241022">Claude 3.5 Haiku</option>
+          </optgroup>
           <optgroup label="NVIDIA NIM">
             <option value="nvidia:deepseek-ai/deepseek-v4-flash-0731">DeepSeek V4 Flash</option>
           </optgroup>
@@ -315,6 +368,244 @@
               <button onclick="event.stopPropagation();saveKey('scaleway')" class="save-btn">Kaydet</button>
             </div>
             <small id="scalewayStatus" class="status-text"></small>
+          </div>
+        </div>
+
+        <div class="provider-card" onclick="toggleProvider('together')">
+          <div class="provider-header">
+            <span class="provider-icon">🤝</span>
+            <span class="provider-name">Together AI</span>
+            <span id="togetherBadge" class="provider-badge">✗ Kayıtlı Değil</span>
+            <span class="provider-arrow">▼</span>
+          </div>
+          <div id="togetherPanel" class="provider-panel">
+            <small class="provider-desc">Deneme kredisi - Llama, DeepSeek</small>
+            <div class="key-row">
+              <input type="password" id="togetherKey" placeholder="API Key...">
+              <button onclick="event.stopPropagation();saveKey('together')" class="save-btn">Kaydet</button>
+            </div>
+            <small id="togetherStatus" class="status-text"></small>
+          </div>
+        </div>
+
+        <div class="provider-card" onclick="toggleProvider('fireworks')">
+          <div class="provider-header">
+            <span class="provider-icon">🎆</span>
+            <span class="provider-name">Fireworks AI</span>
+            <span id="fireworksBadge" class="provider-badge">✗ Kayıtlı Değil</span>
+            <span class="provider-arrow">▼</span>
+          </div>
+          <div id="fireworksPanel" class="provider-panel">
+            <small class="provider-desc">Deneme - Llama, DeepSeek</small>
+            <div class="key-row">
+              <input type="password" id="fireworksKey" placeholder="fw_...">
+              <button onclick="event.stopPropagation();saveKey('fireworks')" class="save-btn">Kaydet</button>
+            </div>
+            <small id="fireworksStatus" class="status-text"></small>
+          </div>
+        </div>
+
+        <div class="provider-card" onclick="toggleProvider('deepinfra')">
+          <div class="provider-header">
+            <span class="provider-icon">🔌</span>
+            <span class="provider-name">DeepInfra</span>
+            <span id="deepinfraBadge" class="provider-badge">✗ Kayıtlı Değil</span>
+            <span class="provider-arrow">▼</span>
+          </div>
+          <div id="deepinfraPanel" class="provider-panel">
+            <small class="provider-desc">Ucuz - Llama, Qwen modelleri</small>
+            <div class="key-row">
+              <input type="password" id="deepinfraKey" placeholder="API Key...">
+              <button onclick="event.stopPropagation();saveKey('deepinfra')" class="save-btn">Kaydet</button>
+            </div>
+            <small id="deepinfraStatus" class="status-text"></small>
+          </div>
+        </div>
+
+        <div class="provider-card" onclick="toggleProvider('novita')">
+          <div class="provider-header">
+            <span class="provider-icon">🚀</span>
+            <span class="provider-name">Novita AI</span>
+            <span id="novitaBadge" class="provider-badge">✗ Kayıtlı Değil</span>
+            <span class="provider-arrow">▼</span>
+          </div>
+          <div id="novitaPanel" class="provider-panel">
+            <small class="provider-desc">Deneme kredisi - DeepSeek, Llama</small>
+            <div class="key-row">
+              <input type="password" id="novitaKey" placeholder="API Key...">
+              <button onclick="event.stopPropagation();saveKey('novita')" class="save-btn">Kaydet</button>
+            </div>
+            <small id="novitaStatus" class="status-text"></small>
+          </div>
+        </div>
+
+        <div class="provider-card" onclick="toggleProvider('ai21')">
+          <div class="provider-header">
+            <span class="provider-icon">🔷</span>
+            <span class="provider-name">AI21 Labs</span>
+            <span id="ai21Badge" class="provider-badge">✗ Kayıtlı Değil</span>
+            <span class="provider-arrow">▼</span>
+          </div>
+          <div id="ai21Panel" class="provider-panel">
+            <small class="provider-desc">$10 deneme - Jamba Large/Mini</small>
+            <div class="key-row">
+              <input type="password" id="ai21Key" placeholder="API Key...">
+              <button onclick="event.stopPropagation();saveKey('ai21')" class="save-btn">Kaydet</button>
+            </div>
+            <small id="ai21Status" class="status-text"></small>
+          </div>
+        </div>
+
+        <div class="provider-card" onclick="toggleProvider('upstage')">
+          <div class="provider-header">
+            <span class="provider-icon">☀️</span>
+            <span class="provider-name">Upstage</span>
+            <span id="upstageBadge" class="provider-badge">✗ Kayıtlı Değil</span>
+            <span class="provider-arrow">▼</span>
+          </div>
+          <div id="upstagePanel" class="provider-panel">
+            <small class="provider-desc">$10 deneme - Solar Pro</small>
+            <div class="key-row">
+              <input type="password" id="upstageKey" placeholder="API Key...">
+              <button onclick="event.stopPropagation();saveKey('upstage')" class="save-btn">Kaydet</button>
+            </div>
+            <small id="upstageStatus" class="status-text"></small>
+          </div>
+        </div>
+
+        <div class="provider-card" onclick="toggleProvider('reka')">
+          <div class="provider-header">
+            <span class="provider-icon">🤖</span>
+            <span class="provider-name">Reka</span>
+            <span id="rekaBadge" class="provider-badge">✗ Kayıtlı Değil</span>
+            <span class="provider-arrow">▼</span>
+          </div>
+          <div id="rekaPanel" class="provider-panel">
+            <small class="provider-desc">$10/ay ücretsiz - Reka Flash/Core</small>
+            <div class="key-row">
+              <input type="password" id="rekaKey" placeholder="API Key...">
+              <button onclick="event.stopPropagation();saveKey('reka')" class="save-btn">Kaydet</button>
+            </div>
+            <small id="rekaStatus" class="status-text"></small>
+          </div>
+        </div>
+
+        <div class="provider-card" onclick="toggleProvider('nebius')">
+          <div class="provider-header">
+            <span class="provider-icon">⭐</span>
+            <span class="provider-name">Nebius</span>
+            <span id="nebiusBadge" class="provider-badge">✗ Kayıtlı Değil</span>
+            <span class="provider-arrow">▼</span>
+          </div>
+          <div id="nebiusPanel" class="provider-panel">
+            <small class="provider-desc">$1 deneme - Llama, Qwen</small>
+            <div class="key-row">
+              <input type="password" id="nebiusKey" placeholder="API Key...">
+              <button onclick="event.stopPropagation();saveKey('nebius')" class="save-btn">Kaydet</button>
+            </div>
+            <small id="nebiusStatus" class="status-text"></small>
+          </div>
+        </div>
+
+        <div class="provider-card" onclick="toggleProvider('baseten')">
+          <div class="provider-header">
+            <span class="provider-icon">🏗️</span>
+            <span class="provider-name">Baseten</span>
+            <span id="basetenBadge" class="provider-badge">✗ Kayıtlı Değil</span>
+            <span class="provider-arrow">▼</span>
+          </div>
+          <div id="basetenPanel" class="provider-panel">
+            <small class="provider-desc">$30 deneme kredisi</small>
+            <div class="key-row">
+              <input type="password" id="basetenKey" placeholder="API Key...">
+              <button onclick="event.stopPropagation();saveKey('baseten')" class="save-btn">Kaydet</button>
+            </div>
+            <small id="basetenStatus" class="status-text"></small>
+          </div>
+        </div>
+
+        <div class="provider-card" onclick="toggleProvider('sambanova')">
+          <div class="provider-header">
+            <span class="provider-icon">⚡</span>
+            <span class="provider-name">SambaNova</span>
+            <span id="sambanovaBadge" class="provider-badge">✗ Kayıtlı Değil</span>
+            <span class="provider-arrow">▼</span>
+          </div>
+          <div id="sambanovaPanel" class="provider-panel">
+            <small class="provider-desc">Deneme - Llama 3.3 70B</small>
+            <div class="key-row">
+              <input type="password" id="sambanovaKey" placeholder="API Key...">
+              <button onclick="event.stopPropagation();saveKey('sambanova')" class="save-btn">Kaydet</button>
+            </div>
+            <small id="sambanovaStatus" class="status-text"></small>
+          </div>
+        </div>
+
+        <div class="provider-card" onclick="toggleProvider('xai')">
+          <div class="provider-header">
+            <span class="provider-icon">✖️</span>
+            <span class="provider-name">xAI Grok</span>
+            <span id="xaiBadge" class="provider-badge">✗ Kayıtlı Değil</span>
+            <span class="provider-arrow">▼</span>
+          </div>
+          <div id="xaiPanel" class="provider-panel">
+            <small class="provider-desc">$25 deneme kredisi - Grok 2</small>
+            <div class="key-row">
+              <input type="password" id="xaiKey" placeholder="xai-...">
+              <button onclick="event.stopPropagation();saveKey('xai')" class="save-btn">Kaydet</button>
+            </div>
+            <small id="xaiStatus" class="status-text"></small>
+          </div>
+        </div>
+
+        <div class="provider-card" onclick="toggleProvider('perplexity')">
+          <div class="provider-header">
+            <span class="provider-icon">🔍</span>
+            <span class="provider-name">Perplexity</span>
+            <span id="perplexityBadge" class="provider-badge">✗ Kayıtlı Değil</span>
+            <span class="provider-arrow">▼</span>
+          </div>
+          <div id="perplexityPanel" class="provider-panel">
+            <small class="provider-desc">Arama destekli - Sonar Pro</small>
+            <div class="key-row">
+              <input type="password" id="perplexityKey" placeholder="pplx-...">
+              <button onclick="event.stopPropagation();saveKey('perplexity')" class="save-btn">Kaydet</button>
+            </div>
+            <small id="perplexityStatus" class="status-text"></small>
+          </div>
+        </div>
+
+        <div class="provider-card" onclick="toggleProvider('openai')">
+          <div class="provider-header">
+            <span class="provider-icon">🟢</span>
+            <span class="provider-name">OpenAI</span>
+            <span id="openaiBadge" class="provider-badge">✗ Kayıtlı Değil</span>
+            <span class="provider-arrow">▼</span>
+          </div>
+          <div id="openaiPanel" class="provider-panel">
+            <small class="provider-desc">GPT-4o Mini deneme</small>
+            <div class="key-row">
+              <input type="password" id="openaiKey" placeholder="sk-...">
+              <button onclick="event.stopPropagation();saveKey('openai')" class="save-btn">Kaydet</button>
+            </div>
+            <small id="openaiStatus" class="status-text"></small>
+          </div>
+        </div>
+
+        <div class="provider-card" onclick="toggleProvider('anthropic')">
+          <div class="provider-header">
+            <span class="provider-icon">🟤</span>
+            <span class="provider-name">Anthropic</span>
+            <span id="anthropicBadge" class="provider-badge">✗ Kayıtlı Değil</span>
+            <span class="provider-arrow">▼</span>
+          </div>
+          <div id="anthropicPanel" class="provider-panel">
+            <small class="provider-desc">Claude 3.5 Haiku deneme</small>
+            <div class="key-row">
+              <input type="password" id="anthropicKey" placeholder="sk-ant-...">
+              <button onclick="event.stopPropagation();saveKey('anthropic')" class="save-btn">Kaydet</button>
+            </div>
+            <small id="anthropicStatus" class="status-text"></small>
           </div>
         </div>
 

@@ -51,7 +51,21 @@ const ENDPOINTS = {
   deepseek: 'https://api.deepseek.com/v1/chat/completions',
   openrouter: 'https://openrouter.ai/api/v1/chat/completions',
   cloudflare: 'https://api.cloudflare.com/client/v4/accounts/ACCOUNT_ID/ai/v1/chat/completions',
-  scaleway: 'https://api.scaleway.ai/v1/chat/completions'
+  scaleway: 'https://api.scaleway.ai/v1/chat/completions',
+  together: 'https://api.together.xyz/v1/chat/completions',
+  fireworks: 'https://api.fireworks.ai/inference/v1/chat/completions',
+  deepinfra: 'https://api.deepinfra.com/v1/openai/chat/completions',
+  novita: 'https://api.novita.ai/v3/openai/chat/completions',
+  ai21: 'https://api.ai21.com/studio/v1/chat/completions',
+  upstage: 'https://api.upstage.ai/v1/solar/chat/completions',
+  reka: 'https://api.reka.ai/v1/chat/completions',
+  nebius: 'https://api.studio.nebius.com/v1/chat/completions',
+  baseten: 'https://api.baseten.co/v1/chat/completions',
+  sambanova: 'https://api.sambanova.ai/v1/chat/completions',
+  xai: 'https://api.x.ai/v1/chat/completions',
+  perplexity: 'https://api.perplexity.ai/chat/completions',
+  openai: 'https://api.openai.com/v1/chat/completions',
+  anthropic: 'https://api.anthropic.com/v1/messages'
 };
 
 function huggingFaceVideo(prompt, model, apiKey, cb) {
@@ -138,7 +152,11 @@ const server = http.createServer((req, res) => {
       nvidia: !!k.nvidia, nara: !!k.nara, airforce: !!k.airforce, pollinations: !!k.pollinations, hf: !!k.hf,
       groq: !!k.groq, cerebras: !!k.cerebras, zai: !!k.zai, siliconflow: !!k.siliconflow,
       google: !!k.google, mistral: !!k.mistral, cohere: !!k.cohere, deepseek: !!k.deepseek,
-      openrouter: !!k.openrouter, cloudflare: !!k.cloudflare, scaleway: !!k.scaleway
+      openrouter: !!k.openrouter, cloudflare: !!k.cloudflare, scaleway: !!k.scaleway,
+      together: !!k.together, fireworks: !!k.fireworks, deepinfra: !!k.deepinfra, novita: !!k.novita,
+      ai21: !!k.ai21, upstage: !!k.upstage, reka: !!k.reka, nebius: !!k.nebius,
+      baseten: !!k.baseten, sambanova: !!k.sambanova, xai: !!k.xai, perplexity: !!k.perplexity,
+      openai: !!k.openai, anthropic: !!k.anthropic
     }));
   }
 

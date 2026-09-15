@@ -100,6 +100,20 @@ fetch(API + '/keys').then(r => r.json()).then(d => {
   document.getElementById('openrouterKey').value = d.openrouter ? '••••••••' : '';
   document.getElementById('cloudflareKey').value = d.cloudflare ? '••••••••' : '';
   document.getElementById('scalewayKey').value = d.scaleway ? '••••••••' : '';
+  document.getElementById('togetherKey').value = d.together ? '••••••••' : '';
+  document.getElementById('fireworksKey').value = d.fireworks ? '••••••••' : '';
+  document.getElementById('deepinfraKey').value = d.deepinfra ? '••••••••' : '';
+  document.getElementById('novitaKey').value = d.novita ? '••••••••' : '';
+  document.getElementById('ai21Key').value = d.ai21 ? '••••••••' : '';
+  document.getElementById('upstageKey').value = d.upstage ? '••••••••' : '';
+  document.getElementById('rekaKey').value = d.reka ? '••••••••' : '';
+  document.getElementById('nebiusKey').value = d.nebius ? '••••••••' : '';
+  document.getElementById('basetenKey').value = d.baseten ? '••••••••' : '';
+  document.getElementById('sambanovaKey').value = d.sambanova ? '••••••••' : '';
+  document.getElementById('xaiKey').value = d.xai ? '••••••••' : '';
+  document.getElementById('perplexityKey').value = d.perplexity ? '••••••••' : '';
+  document.getElementById('openaiKey').value = d.openai ? '••••••••' : '';
+  document.getElementById('anthropicKey').value = d.anthropic ? '••••••••' : '';
   updateBadge('nara', d.nara);
   updateBadge('nvidia', d.nvidia);
   updateBadge('airforce', d.airforce);
@@ -116,6 +130,20 @@ fetch(API + '/keys').then(r => r.json()).then(d => {
   updateBadge('openrouter', d.openrouter);
   updateBadge('cloudflare', d.cloudflare);
   updateBadge('scaleway', d.scaleway);
+  updateBadge('together', d.together);
+  updateBadge('fireworks', d.fireworks);
+  updateBadge('deepinfra', d.deepinfra);
+  updateBadge('novita', d.novita);
+  updateBadge('ai21', d.ai21);
+  updateBadge('upstage', d.upstage);
+  updateBadge('reka', d.reka);
+  updateBadge('nebius', d.nebius);
+  updateBadge('baseten', d.baseten);
+  updateBadge('sambanova', d.sambanova);
+  updateBadge('xai', d.xai);
+  updateBadge('perplexity', d.perplexity);
+  updateBadge('openai', d.openai);
+  updateBadge('anthropic', d.anthropic);
 }).catch(() => {});
 
 function saveKey(who) {
