@@ -260,13 +260,21 @@ const server = http.createServer((req, res) => {
   }
 
   // Test brain
-  if (req.method === 'GET' && req.url === '/test-brain') {
-    const brain = 'nara';
-    const keys = { naraKey: config.naraKey || '', nvidiaKey: config.nvidiaKey || '', airforceKey: config.airforceKey || '' };
-    runBrain(brain, 'Merhaba, nasılsın?', '', keys, (err, result) => {
-      if (err) return send(res, 200, { error: err.message, config: { nara: !!keys.naraKey, nvidia: !!keys.nvidiaKey, airforce: !!keys.airforceKey } }, origin);
-      send(res, 200, result, origin);
+  if (req.method === 'GET' && req.url === '/test-nvidia') {
+    if (!config.nvidiaKey) return send(res, 200, { error: 'NVIDIA key yok' }, origin);
+    const testBody = JSON.stringify({ model: 'deepseek-ai/deepseek-v4-flash-0731', messages: [{ role: 'user', content: 'Merhaba' }], max_tokens: 50 });
+    const testReq = https.request({
+      hostname: 'integrate.api.nvidia.com', port: 443, path: '/v1/chat/completions', method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + config.nvidiaKey, 'Content-Type': 'application/json' },
+      timeout: 30000
+    }, (testRes) => {
+      let d = '';
+      testRes.on('data', (c) => { d += c; });
+      testRes.on('end', () => send(res, 200, { status: testRes.statusCode, body: d.slice(0, 500) }, origin));
     });
+    testReq.on('error', (e) => send(res, 200, { error: e.code + ': ' + e.message }, origin));
+    testReq.write(testBody);
+    testReq.end();
     return;
   }
 
