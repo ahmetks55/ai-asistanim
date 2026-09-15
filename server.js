@@ -77,7 +77,54 @@ const ENDPOINTS = {
   sensenova: 'https://api.sensenova.cn/v1/chat/completions',
   xiaomi: 'https://api.xiaomi.com/v1/chat/completions',
   tencent: 'https://hunyuan.tencentcloudapi.com/v1/chat/completions',
-  bytedance: 'https://ark.cn-beijing.volces.com/api/v3/chat/completions'
+  bytedance: 'https://ark.cn-beijing.volces.com/api/v3/chat/completions',
+  github: 'https://models.github.ai/inference/chat/completions',
+  llm7: 'https://api.llm7.io/v1/chat/completions',
+  ovhcloud: 'https://oai.endpoints.kepler.ai.cloud.ovh.net/v1/chat/completions',
+  ollama: 'https://api.ollama.com/v1/chat/completions',
+  kilo: 'https://api.kilo.ai/api/gateway/v1/chat/completions',
+  opencodezen: 'https://opencode.ai/zen/v1/chat/completions',
+  aionlabs: 'https://api.aionlabs.ai/v1/chat/completions',
+  agnes: 'https://apihub.agnes-ai.com/v1/chat/completions',
+  chutes: 'https://api.chutes.ai/v1/chat/completions',
+  glhf: 'https://glhf.chat/api/openai/v1/chat/completions',
+  nscale: 'https://inference.api.nscale.com/v1/chat/completions',
+  hyperbolic: 'https://api.hyperbolic.xyz/v1/chat/completions',
+  iflow: 'https://api.iflow.cn/v1/chat/completions',
+  kluster: 'https://api.kluster.ai/v1/chat/completions',
+  friendli: 'https://api.friendli.ai/v1/chat/completions',
+  lepton: 'https://api.lepton.ai/v1/chat/completions',
+  anyscale: 'https://api.endpoints.anyscale.com/v1/chat/completions',
+  puter: 'https://api.puter.com/v1/chat/completions',
+  aiml: 'https://api.aimlapi.com/v1/chat/completions',
+  nagaai: 'https://api.naga.ac/v1/chat/completions',
+  paxsenix: 'https://api.paxsenix.org/v1/chat/completions',
+  aihubmix: 'https://aihubmix.com/v1/chat/completions',
+  fastrouter: 'https://fastrouter.ai/v1/chat/completions',
+  literouter: 'https://api.literouter.com/v1/chat/completions',
+  swiftrouter: 'https://api.swiftrouter.com/v1/chat/completions',
+  unorouter: 'https://api.unorouter.com/v1/chat/completions',
+  voidai: 'https://api.voidai.app/v1/chat/completions',
+  valorgpt: 'https://api.valorgpt.com/v1/chat/completions',
+  zenllm: 'https://api.zenllm.org/v1/chat/completions',
+  resurge: 'https://api.resurge.one/v1/chat/completions',
+  subaxis: 'https://api.subaxis.dev/v1/chat/completions',
+  routeway: 'https://api.routeway.ai/v1/chat/completions',
+  requesty: 'https://api.requesty.ai/v1/chat/completions',
+  aipooled: 'https://api.ai.pooled.dev/v1/chat/completions',
+  llmgateway: 'https://api.llmgateway.io/v1/chat/completions',
+  studiolm: 'https://api.studiolm.dev/v1/chat/completions',
+  pixazo: 'https://api.pixazo.ai/v1/chat/completions',
+  yingsuan: 'https://api.yingsuan.top/v1/chat/completions',
+  xeven: 'https://api.xeven.workers.dev/v1/chat/completions',
+  ofox: 'https://api.ofox.ai/v1/chat/completions',
+  mnnai: 'https://api.mnnai.ru/v1/chat/completions',
+  wandb: 'https://api.wandb.ai/v1/chat/completions',
+  replicate: 'https://api.replicate.com/v1/chat/completions',
+  arcee: 'https://conductor.arcee.ai/v1/chat/completions',
+  subnp: 'https://api.subnp.com/v1/chat/completions',
+  aichixia: 'https://api.aichixia.xyz/v1/chat/completions',
+  pydantic: 'https://ai.pydantic.dev/v1/chat/completions'
 };
 
 function huggingFaceVideo(prompt, model, apiKey, cb) {
@@ -109,10 +156,7 @@ function huggingFaceVideo(prompt, model, apiKey, cb) {
 }
 
 function pollinationsVideo(prompt, model, apiKey, cb) {
-  const body = JSON.stringify({
-    model: model,
-    prompt: prompt
-  });
+  const body = JSON.stringify({ model, prompt });
   const req = https.request({
     hostname: 'gen.pollinations.ai', port: 443, path: '/v1/videos/generations', method: 'POST',
     headers: {
@@ -135,10 +179,7 @@ function pollinationsVideo(prompt, model, apiKey, cb) {
 function pollinationsVideoStatus(jobId, apiKey, cb) {
   const req = https.request({
     hostname: 'gen.pollinations.ai', port: 443, path: '/v1/videos/generations/' + jobId, method: 'GET',
-    headers: {
-      'Authorization': 'Bearer ' + apiKey,
-      'Accept': 'application/json'
-    },
+    headers: { 'Authorization': 'Bearer ' + apiKey, 'Accept': 'application/json' },
     timeout: 30000
   }, (res) => {
     let data = '';
@@ -160,19 +201,14 @@ const server = http.createServer((req, res) => {
 
   if (req.method === 'GET' && req.url === '/keys') {
     const k = loadKeys();
-    return res.end(JSON.stringify({
-      nvidia: !!k.nvidia, nara: !!k.nara, airforce: !!k.airforce, pollinations: !!k.pollinations, hf: !!k.hf,
-      groq: !!k.groq, cerebras: !!k.cerebras, zai: !!k.zai, siliconflow: !!k.siliconflow,
-      google: !!k.google, mistral: !!k.mistral, cohere: !!k.cohere, deepseek: !!k.deepseek,
-      openrouter: !!k.openrouter, cloudflare: !!k.cloudflare, scaleway: !!k.scaleway,
-      together: !!k.together, fireworks: !!k.fireworks, deepinfra: !!k.deepinfra, novita: !!k.novita,
-      ai21: !!k.ai21, upstage: !!k.upstage, reka: !!k.reka, nebius: !!k.nebius,
-      baseten: !!k.baseten, sambanova: !!k.sambanova, xai: !!k.xai, perplexity: !!k.perplexity,
-      openai: !!k.openai, anthropic: !!k.anthropic,
-      venice: !!k.venice, minimax: !!k.minimax, moonshot: !!k.moonshot, stepfun: !!k.stepfun,
-      zhipu: !!k.zhipu, volcengine: !!k.volcengine, alibaba: !!k.alibaba, baidu: !!k.baidu,
-      sensenova: !!k.sensenova, xiaomi: !!k.xiaomi, tencent: !!k.tencent, bytedance: !!k.bytedance
-    }));
+    const keys = {};
+    for (const name of Object.keys(ENDPOINTS)) {
+      keys[name] = !!k[name];
+    }
+    keys.nara = !!k.nara;
+    keys.pollinations = !!k.pollinations;
+    keys.hf = !!k.hf;
+    return res.end(JSON.stringify(keys));
   }
 
   if (req.method === 'GET' && req.url.startsWith('/video-status')) {
@@ -221,7 +257,6 @@ const server = http.createServer((req, res) => {
         const p = JSON.parse(body);
         const keys = loadKeys();
 
-        // Video generation via Pollinations
         if (p.provider === 'video') {
           const k = keys.pollinations || '';
           if (!k) return res.end(JSON.stringify({ error: 'Pollinations key yok. Ayarlardan girin.' }));
@@ -241,7 +276,6 @@ const server = http.createServer((req, res) => {
           return;
         }
 
-        // Video generation via Hugging Face
         if (p.provider === 'hfvideo') {
           const k = keys.hf || '';
           if (!k) return res.end(JSON.stringify({ error: 'Hugging Face key yok. Ayarlardan girin.' }));
@@ -259,7 +293,6 @@ const server = http.createServer((req, res) => {
           return;
         }
 
-        // Image generation via Pollinations
         if (p.provider === 'image') {
           const prompt = encodeURIComponent(p.messages[p.messages.length - 1].content);
           const url = 'https://image.pollinations.ai/prompt/' + prompt + '?model=' + p.model + '&width=1024&height=1024';
