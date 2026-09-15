@@ -7,104 +7,69 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <div class="container">
-    <header>
-      <div class="hdr-left">
-        <p class="subtitle">Ücretsiz AI Aracı</p>
-      </div>
-      <div class="hdr-center">
-        <h1>🤖 AI Asistanım</h1>
-      </div>
-      <div class="hdr-right">
-        <span id="localStatus" class="status"></span>
-        <button id="settingsBtn" class="settings-trigger">⚙️</button>
+  <div class="app">
+    <!-- Header -->
+    <header class="header">
+      <div class="logo">🤖 AI Asistanım</div>
+      <div class="header-actions">
+        <select id="brainSelect" class="brain-select">
+          <option value="nara">NaraRouter</option>
+          <option value="nvidia">NVIDIA NIM</option>
+          <option value="airforce">Airforce</option>
+        </select>
+        <button id="settingsBtn" class="icon-btn" title="Ayarlar">⚙️</button>
       </div>
     </header>
 
-    <div class="chat-area">
+    <!-- Chat Area -->
+    <main class="chat-area">
       <div id="messages" class="messages">
         <div class="message bot">
-          <strong>🤖 Asistan:</strong> Merhaba! Ben AI asistanınızım. Şunları yapabilirim:<br>🗣️ <b>Sohbet</b> (hafızam var!)<br>🖼️ <b>Resim üretme</b> (örn. "bir kedi resmi çiz")<br>🎬 <b>Video üretme</b> (örn. "gelecek hakkında video üret")<br>💻 <b>Kod çalıştırma</b> (örn. "2+2 hesapla")<br>🔍 <b>Web arama</b> (örn. "internette ara...")<br>✍️ <b>Hikaye, özet, çeviri</b> yazma
+          <div class="msg-content">Merhaba! Ben AI asistanınızım. Size nasıl yardımcı olabilirim?</div>
         </div>
       </div>
-    </div>
+    </main>
 
+    <!-- Input Area -->
     <div class="input-area">
-      <textarea id="userInput" rows="3" placeholder="Bana bir şey sorun..."></textarea>
-      <button id="sendBtn">Gönder →</button>
+      <div class="input-row">
+        <textarea id="userInput" rows="1" placeholder="Mesajınızı yazın..."></textarea>
+        <button id="sendBtn" class="send-btn">Gönder</button>
+      </div>
     </div>
   </div>
 
-  <!-- AYARLAR PANELİ -->
-  <div id="settingsOverlay" class="settings-overlay" style="display:none">
-    <div class="settings-panel">
-      <div class="settings-header">
+  <!-- Settings Modal -->
+  <div id="settingsModal" class="modal" style="display:none">
+    <div class="modal-content">
+      <div class="modal-header">
         <h2>⚙️ Ayarlar</h2>
-        <button id="settingsClose" class="settings-close">&times;</button>
+        <button id="closeSettings" class="close-btn">&times;</button>
       </div>
-      <div class="settings-body">
-        <div class="settings-section">
-          <h3>🧠 Beyin Modu</h3>
-          <p class="settings-desc">Hangi AI modelini kullanmak istediğinizi seçin.</p>
-          <div class="brain-selector">
-            <button class="brain-btn active" data-brain="nara">NaraRouter (Ücretsiz)</button>
-            <button class="brain-btn" data-brain="nvidia">NVIDIA NIM (Llama 3.3)</button>
-            <button class="brain-btn" data-brain="airforce">Airforce (Mimo Pro)</button>
+      <div class="modal-body">
+        <div class="setting-group">
+          <label>NVIDIA NIM API Key</label>
+          <div class="key-row">
+            <input type="password" id="nvidiaKey" placeholder="nvapi-...">
+            <button onclick="saveKey('nvidia')" class="save-btn">Kaydet</button>
           </div>
+          <small id="nvidiaStatus" class="status-text"></small>
         </div>
-
-        <div class="settings-section">
-          <h3>🔑 API Anahtarları</h3>
-          <p class="settings-desc">Anahtarları bir kez girin, sistem sürekli hatırlasın.</p>
-          
-          <div class="key-group">
-            <label>NVIDIA NIM API Key</label>
-            <div class="key-row">
-              <input type="password" id="nvidiaKeyInput" placeholder="nvapi-...">
-              <button id="nvidiaKeySave" class="key-save">Kaydet</button>
-            </div>
-            <span id="nvidiaKeyStatus" class="key-status"></span>
+        <div class="setting-group">
+          <label>NaraRouter API Key</label>
+          <div class="key-row">
+            <input type="password" id="naraKey" placeholder="sk-nry-...">
+            <button onclick="saveKey('nara')" class="save-btn">Kaydet</button>
           </div>
-
-          <div class="key-group">
-            <label>Airforce API Key</label>
-            <div class="key-row">
-              <input type="password" id="airforceKeyInput" placeholder="API Key...">
-              <button id="airforceKeySave" class="key-save">Kaydet</button>
-            </div>
-            <span id="airforceKeyStatus" class="key-status"></span>
-          </div>
-
-          <div class="key-group">
-            <label>NaraRouter API Key</label>
-            <div class="key-row">
-              <input type="password" id="naraKeyInput" placeholder="sk-nry-...">
-              <button id="naraKeySave" class="key-save">Kaydet</button>
-            </div>
-            <span id="naraKeyStatus" class="key-status"></span>
-          </div>
+          <small id="naraStatus" class="status-text"></small>
         </div>
-
-        <div class="settings-section">
-          <h3>📊 Durum</h3>
-          <div id="statusPanel" class="status-panel">
-            <div class="status-row">
-              <span>NaraRouter</span>
-              <span id="naraStatus" class="status-dot">-</span>
-            </div>
-            <div class="status-row">
-              <span>NVIDIA NIM</span>
-              <span id="nvidiaStatus" class="status-dot">-</span>
-            </div>
-            <div class="status-row">
-              <span>Airforce</span>
-              <span id="airforceStatus" class="status-dot">-</span>
-            </div>
+        <div class="setting-group">
+          <label>Airforce API Key</label>
+          <div class="key-row">
+            <input type="password" id="airforceKey" placeholder="API Key...">
+            <button onclick="saveKey('airforce')" class="save-btn">Kaydet</button>
           </div>
-        </div>
-
-        <div class="settings-section">
-          <button id="checkAllStatus" class="check-btn">🔄 Tümünü Kontrol Et</button>
+          <small id="airforceStatus" class="status-text"></small>
         </div>
       </div>
     </div>
