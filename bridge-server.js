@@ -119,38 +119,37 @@ function naraChat(task, context, key, cb) {
 // ===== NVIDIA NIM =====
 function nvidiaChat(task, context, key, cb) {
   const k = key || config.nvidiaKey || '';
-  console.log('[NVIDIA] İstek... Key:', k ? 'var' : 'YOK');
+  console.log('[NVIDIA] Key uzunluğu:', k ? k.length : 0, 'Prefix:', k ? k.substring(0, 8) : 'YOK');
   if (!k) return cb(new Error('NVIDIA anahtarı yok'));
   const msgs = [];
   if (context) msgs.push({ role: 'system', content: context });
   msgs.push({ role: 'user', content: task });
   const body = JSON.stringify({ model: 'deepseek-ai/deepseek-v4-flash-0731', messages: msgs, max_tokens: 1024, temperature: 0.7, top_p: 0.95 });
+  console.log('[NVIDIA] İstek gönderiliyor...');
   const req = https.request({
     hostname: 'integrate.api.nvidia.com',
     port: 443,
     path: '/v1/chat/completions',
     method: 'POST',
-    headers: { 'Authorization': 'Bearer ' + k, 'Content-Type': 'application/json', 'Accept': 'application/json' },
+    headers: { 'Authorization': 'Bearer ' + k, 'Content-Type': 'application/json' },
     timeout: 60000
   }, (res) => {
     let data = '';
     res.on('data', (c) => { data += c; });
     res.on('end', () => {
-      console.log('[NVIDIA] Status:', res.statusCode);
+      console.log('[NVIDIA] Status:', res.statusCode, 'Body:', data.slice(0, 200));
       if (res.statusCode >= 400) {
-        console.log('[NVIDIA] Hata:', data.slice(0, 500));
-        return cb(new Error('NVIDIA HTTP ' + res.statusCode + ': ' + data.slice(0, 200)));
+        return cb(new Error('NVIDIA HTTP ' + res.statusCode + ': ' + data.slice(0, 300)));
       }
       try {
         const j = JSON.parse(data);
         const text = (j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content) || '';
-        if (!text) console.log('[NVIDIA] Boş yanıt:', JSON.stringify(j).slice(0, 300));
         cb(null, text.trim() || null);
-      } catch(e) { console.log('[NVIDIA] Parse hatası:', e.message); cb(null, null); }
+      } catch(e) { cb(null, null); }
     });
   });
-  req.on('error', (e) => { console.log('[NVIDIA] Hata:', e.message); cb(e); });
-  req.on('timeout', () => { console.log('[NVIDIA] TIMEOUT 60s!'); req.destroy(new Error('NVIDIA API timeout - 60 saniye')); });
+  req.on('error', (e) => { console.log('[NVIDIA] HATA:', e.code, e.message); cb(e); });
+  req.on('timeout', () => { console.log('[NVIDIA] TIMEOUT'); req.destroy(new Error('timeout')); });
   req.write(body);
   req.end();
 }
