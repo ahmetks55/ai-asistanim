@@ -1024,6 +1024,24 @@ window.openProviderModal = function(who) {
 document.getElementById('closeProviderModal').onclick = () => document.getElementById('providerModal').style.display = 'none';
 document.getElementById('providerModal').onclick = (e) => { if (e.target.id === 'providerModal') e.target.style.display = 'none'; };
 
+// ESC ile modal kapat
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    document.getElementById('providerModal').style.display = 'none';
+    document.getElementById('settingsModal').style.display = 'none';
+  }
+});
+
+// Sağlayıcı ara
+window.filterProviders = function(q) {
+  const cards = document.querySelectorAll('.pg-card');
+  const search = q.toLowerCase();
+  cards.forEach(c => {
+    const name = c.querySelector('.pg-name').textContent.toLowerCase();
+    c.style.display = name.includes(search) ? '' : 'none';
+  });
+};
+
 // Provider key kaydet
 window.saveProviderKey = function() {
   const val = document.getElementById('pmKeyInput').value.trim();
