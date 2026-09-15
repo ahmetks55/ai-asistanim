@@ -343,3 +343,9 @@ textarea::placeholder {
   background: var(--border);
   border-radius: 3px;
 }
+
+video {
+  max-width: 100%;
+  border-radius: 12px;
+  margin-top: 8px;
+}

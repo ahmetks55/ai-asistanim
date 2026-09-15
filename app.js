@@ -27,6 +27,7 @@ fetch(API + '/keys').then(r => r.json()).then(d => {
   document.getElementById('nvidiaKey').value = d.nvidia ? '••••••••' : '';
   document.getElementById('naraKey').value = d.nara ? '••••••••' : '';
   document.getElementById('airforceKey').value = d.airforce ? '••••••••' : '';
+  document.getElementById('pollinationsKey').value = d.pollinations ? '••••••••' : '';
 }).catch(() => {});
 
 function saveKey(who) {
@@ -85,11 +86,34 @@ async function send() {
       addMessage('🖼️ Görsel oluşturuluyor...', 'bot');
       const imgDiv = document.createElement('div');
       imgDiv.className = 'message bot';
-      imgDiv.innerHTML = '<img src="' + url + '" style="max-width:100%;border-radius:12px;" onload="this.style.display=\'block\'" />';
+      imgDiv.innerHTML = '<img src="' + url + '" style="max-width:100%;border-radius:12px;" />';
       messagesEl.appendChild(imgDiv);
       messagesEl.parentElement.scrollTop = messagesEl.parentElement.scrollHeight;
       chatHistory.push({ role: 'user', content: text });
       chatHistory.push({ role: 'assistant', content: 'Görsel üretildi: ' + text });
+    } else if (provider === 'video') {
+      // Pollinations video generation
+      typing.remove();
+      addMessage('🎬 Video oluşturuluyor... Bu işlem 1-2 dakika sürebilir.', 'bot');
+      const r = await fetch(API + '/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ provider, model, messages })
+      });
+      const d = await r.json();
+      if (d.video) {
+        const vidDiv = document.createElement('div');
+        vidDiv.className = 'message bot';
+        vidDiv.innerHTML = '<video src="' + d.video + '" controls style="max-width:100%;border-radius:12px;"></video>';
+        messagesEl.appendChild(vidDiv);
+        messagesEl.parentElement.scrollTop = messagesEl.parentElement.scrollHeight;
+        chatHistory.push({ role: 'user', content: text });
+        chatHistory.push({ role: 'assistant', content: 'Video üretildi: ' + text });
+      } else if (d.job_id) {
+        addMessage('Video işleniyor (ID: ' + d.job_id + '). Pollinations dashboardundan sonucu kontrol edin.', 'bot');
+      } else {
+        addMessage('Hata: ' + (d.error || 'Video oluşturulamadı'), 'bot');
+      }
     } else {
       const r = await fetch(API + '/chat', {
         method: 'POST',

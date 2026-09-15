@@ -41,6 +41,13 @@
             <option value="image:flux">🎨 Flux (Pollinations)</option>
             <option value="image:turbo">🎨 Turbo (Pollinations)</option>
           </optgroup>
+          <optgroup label="Video Üretimi">
+            <option value="video:bytedance/seedance-2.0-fast">🎬 Seedance 2.0 Fast</option>
+            <option value="video:bytedance/seedance-2.5">🎬 Seedance 2.5</option>
+            <option value="video:bytedance/seedance-2.0">🎬 Seedance 2.0</option>
+            <option value="video:x-ai/grok-imagine-video">🎬 Grok Video</option>
+            <option value="video:google/veo-3.1-fast">🎬 Veo 3.1 Fast</option>
+          </optgroup>
         </select>
       </div>
       <div class="input-row">
@@ -80,6 +87,14 @@
             <button onclick="saveKey('airforce')" class="save-btn">Kaydet</button>
           </div>
           <small id="airforceStatus" class="status-text"></small>
+        </div>
+        <div class="setting-group">
+          <label>Pollinations API Key (Video/Görsel için)</label>
+          <div class="key-row">
+            <input type="password" id="pollinationsKey" placeholder="pk_ veya sk_...">
+            <button onclick="saveKey('pollinations')" class="save-btn">Kaydet</button>
+          </div>
+          <small id="pollinationsStatus" class="status-text"></small>
         </div>
       </div>
     </div>

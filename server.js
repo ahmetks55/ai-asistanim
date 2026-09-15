@@ -43,6 +43,30 @@ const ENDPOINTS = {
   airforce: 'https://api.airforce/v1/chat/completions'
 };
 
+function pollinationsVideo(prompt, model, apiKey, cb) {
+  const body = JSON.stringify({
+    model: model,
+    prompt: prompt
+  });
+  const req = https.request({
+    hostname: 'gen.pollinations.ai', port: 443, path: '/v1/videos/generations', method: 'POST',
+    headers: {
+      'Authorization': 'Bearer ' + apiKey,
+      'Content-Type': 'application/json',
+      'Content-Length': Buffer.byteLength(body)
+    },
+    timeout: 120000
+  }, (res) => {
+    let data = '';
+    res.on('data', c => data += c);
+    res.on('end', () => cb(null, data));
+  });
+  req.on('error', e => cb(e));
+  req.on('timeout', () => { req.destroy(); cb(new Error('timeout')); });
+  req.write(body);
+  req.end();
+}
+
 const server = http.createServer((req, res) => {
   const origin = req.headers.origin;
   cors(res, origin);
@@ -55,7 +79,7 @@ const server = http.createServer((req, res) => {
   if (req.method === 'GET' && req.url === '/keys') {
     const k = loadKeys();
     return res.end(JSON.stringify({
-      nvidia: !!k.nvidia, nara: !!k.nara, airforce: !!k.airforce
+      nvidia: !!k.nvidia, nara: !!k.nara, airforce: !!k.airforce, pollinations: !!k.pollinations
     }));
   }
 
@@ -81,6 +105,35 @@ const server = http.createServer((req, res) => {
       try {
         const p = JSON.parse(body);
         const keys = loadKeys();
+
+        // Video generation via Pollinations
+        if (p.provider === 'video') {
+          const k = keys.pollinations || '';
+          if (!k) return res.end(JSON.stringify({ error: 'Pollinations key yok. Ayarlardan girin.' }));
+          pollinationsVideo(p.messages[p.messages.length - 1].content, p.model, k, (err, data) => {
+            if (err) return res.end(JSON.stringify({ error: err.message }));
+            try {
+              const j = JSON.parse(data);
+              if (j.video_url || j.url) {
+                res.end(JSON.stringify({ video: j.video_url || j.url }));
+              } else if (j.id) {
+                // Async job - poll for result
+                res.end(JSON.stringify({ job_id: j.id, status: 'processing' }));
+              } else {
+                res.end(JSON.stringify({ error: j.error?.message || 'Video oluşturulamadı' }));
+              }
+            } catch(e) { res.end(JSON.stringify({ error: 'Parse hatası' })); }
+          });
+          return;
+        }
+
+        // Image generation via Pollinations
+        if (p.provider === 'image') {
+          const prompt = encodeURIComponent(p.messages[p.messages.length - 1].content);
+          const url = 'https://image.pollinations.ai/prompt/' + prompt + '?model=' + p.model + '&width=1024&height=1024';
+          return res.end(JSON.stringify({ image: url }));
+        }
+
         const k = keys[p.provider] || '';
         if (!k) return res.end(JSON.stringify({ error: p.provider + ' key yok. Ayarlardan girin.' }));
 
