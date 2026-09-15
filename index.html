@@ -32,6 +32,24 @@
             <option value="nara:tencent-hy3-free">Hy3 Free</option>
             <option value="nara:agnes-2.5-flash" selected>Agnes 2.5 Flash</option>
           </optgroup>
+          <optgroup label="Groq (Ücretsiz)">
+            <option value="groq:llama-3.1-8b-instant">Llama 3.1 8B</option>
+            <option value="groq:llama-3.3-70b-versatile">Llama 3.3 70B</option>
+            <option value="groq:gemma2-9b-it">Gemma 2 9B</option>
+            <option value="groq:deepseek-r1-distill-llama-70b">DeepSeek R1 70B</option>
+          </optgroup>
+          <optgroup label="Cerebras (Ücretsiz)">
+            <option value="cerebras:llama-3.3-70b">Llama 3.3 70B</option>
+            <option value="cerebras:llama-3.1-8b">Llama 3.1 8B</option>
+          </optgroup>
+          <optgroup label="Z.ai GLM (Ücretsiz)">
+            <option value="zai:glm-4.5-flash">GLM 4.5 Flash</option>
+            <option value="zai:glm-4.7-flash">GLM 4.7 Flash</option>
+          </optgroup>
+          <optgroup label="SiliconFlow (Ücretsiz)">
+            <option value="siliconflow:deepseek-ai/deepseek-v3">DeepSeek V3</option>
+            <option value="siliconflow:qwen/qwen3-8b">Qwen3 8B</option>
+          </optgroup>
           <optgroup label="NVIDIA NIM">
             <option value="nvidia:deepseek-ai/deepseek-v4-flash-0731">DeepSeek V4 Flash</option>
           </optgroup>
@@ -83,9 +101,77 @@
           </div>
         </div>
 
+        <div class="provider-card" onclick="toggleProvider('groq')">
+          <div class="provider-header">
+            <span class="provider-icon">⚡</span>
+            <span class="provider-name">Groq</span>
+            <span id="groqBadge" class="provider-badge">✗ Kayıtlı Değil</span>
+            <span class="provider-arrow">▼</span>
+          </div>
+          <div id="groqPanel" class="provider-panel">
+            <small class="provider-desc">Ücretsiz - Llama, Gemma, DeepSeek (30 RPM, 1000/gün)</small>
+            <div class="key-row">
+              <input type="password" id="groqKey" placeholder="gsk_...">
+              <button onclick="event.stopPropagation();saveKey('groq')" class="save-btn">Kaydet</button>
+            </div>
+            <small id="groqStatus" class="status-text"></small>
+          </div>
+        </div>
+
+        <div class="provider-card" onclick="toggleProvider('cerebras')">
+          <div class="provider-header">
+            <span class="provider-icon">🧠</span>
+            <span class="provider-name">Cerebras</span>
+            <span id="cerebrasBadge" class="provider-badge">✗ Kayıtlı Değil</span>
+            <span class="provider-arrow">▼</span>
+          </div>
+          <div id="cerebrasPanel" class="provider-panel">
+            <small class="provider-desc">Ücretsiz - Llama modelleri (1M token/gün)</small>
+            <div class="key-row">
+              <input type="password" id="cerebrasKey" placeholder="csk-...">
+              <button onclick="event.stopPropagation();saveKey('cerebras')" class="save-btn">Kaydet</button>
+            </div>
+            <small id="cerebrasStatus" class="status-text"></small>
+          </div>
+        </div>
+
+        <div class="provider-card" onclick="toggleProvider('zai')">
+          <div class="provider-header">
+            <span class="provider-icon">🔵</span>
+            <span class="provider-name">Z.ai (GLM)</span>
+            <span id="zaiBadge" class="provider-badge">✗ Kayıtlı Değil</span>
+            <span class="provider-arrow">▼</span>
+          </div>
+          <div id="zaiPanel" class="provider-panel">
+            <small class="provider-desc">Ücretsiz - GLM Flash modelleri (kayıt gerekmez)</small>
+            <div class="key-row">
+              <input type="password" id="zaiKey" placeholder="API Key...">
+              <button onclick="event.stopPropagation();saveKey('zai')" class="save-btn">Kaydet</button>
+            </div>
+            <small id="zaiStatus" class="status-text"></small>
+          </div>
+        </div>
+
+        <div class="provider-card" onclick="toggleProvider('siliconflow')">
+          <div class="provider-header">
+            <span class="provider-icon">🌊</span>
+            <span class="provider-name">SiliconFlow</span>
+            <span id="siliconflowBadge" class="provider-badge">✗ Kayıtlı Değil</span>
+            <span class="provider-arrow">▼</span>
+          </div>
+          <div id="siliconflowPanel" class="provider-panel">
+            <small class="provider-desc">Ücretsiz - DeepSeek, Qwen modelleri</small>
+            <div class="key-row">
+              <input type="password" id="siliconflowKey" placeholder="sk-...">
+              <button onclick="event.stopPropagation();saveKey('siliconflow')" class="save-btn">Kaydet</button>
+            </div>
+            <small id="siliconflowStatus" class="status-text"></small>
+          </div>
+        </div>
+
         <div class="provider-card" onclick="toggleProvider('nvidia')">
           <div class="provider-header">
-            <span class="provider-icon">🟢</span>
+            <span class="provider-icon">💚</span>
             <span class="provider-name">NVIDIA NIM</span>
             <span id="nvidiaBadge" class="provider-badge">✗ Kayıtlı Değil</span>
             <span class="provider-arrow">▼</span>
@@ -102,7 +188,7 @@
 
         <div class="provider-card" onclick="toggleProvider('airforce')">
           <div class="provider-header">
-            <span class="provider-icon">🟢</span>
+            <span class="provider-icon">✈️</span>
             <span class="provider-name">Airforce</span>
             <span id="airforceBadge" class="provider-badge">✗ Kayıtlı Değil</span>
             <span class="provider-arrow">▼</span>
@@ -136,7 +222,7 @@
 
         <div class="provider-card" onclick="toggleProvider('hf')">
           <div class="provider-header">
-            <span class="provider-icon">🟠</span>
+            <span class="provider-icon">🤗</span>
             <span class="provider-name">Hugging Face</span>
             <span id="hfBadge" class="provider-badge">✗ Kayıtlı Değil</span>
             <span class="provider-arrow">▼</span>

@@ -89,11 +89,19 @@ fetch(API + '/keys').then(r => r.json()).then(d => {
   document.getElementById('airforceKey').value = d.airforce ? '••••••••' : '';
   document.getElementById('pollinationsKey').value = d.pollinations ? '••••••••' : '';
   document.getElementById('hfKey').value = d.hf ? '••••••••' : '';
+  document.getElementById('groqKey').value = d.groq ? '••••••••' : '';
+  document.getElementById('cerebrasKey').value = d.cerebras ? '••••••••' : '';
+  document.getElementById('zaiKey').value = d.zai ? '••••••••' : '';
+  document.getElementById('siliconflowKey').value = d.siliconflow ? '••••••••' : '';
   updateBadge('nara', d.nara);
   updateBadge('nvidia', d.nvidia);
   updateBadge('airforce', d.airforce);
   updateBadge('pollinations', d.pollinations);
   updateBadge('hf', d.hf);
+  updateBadge('groq', d.groq);
+  updateBadge('cerebras', d.cerebras);
+  updateBadge('zai', d.zai);
+  updateBadge('siliconflow', d.siliconflow);
 }).catch(() => {});
 
 function saveKey(who) {

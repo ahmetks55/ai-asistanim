@@ -40,7 +40,11 @@ function proxy(targetUrl, headers, body, cb) {
 const ENDPOINTS = {
   nvidia: 'https://integrate.api.nvidia.com/v1/chat/completions',
   nara: 'https://router.bynara.id/v1/chat/completions',
-  airforce: 'https://api.airforce/v1/chat/completions'
+  airforce: 'https://api.airforce/v1/chat/completions',
+  groq: 'https://api.groq.com/openai/v1/chat/completions',
+  cerebras: 'https://api.cerebras.ai/v1/chat/completions',
+  zai: 'https://api.z.ai/api/paas/v4/chat/completions',
+  siliconflow: 'https://api.siliconflow.cn/v1/chat/completions'
 };
 
 function huggingFaceVideo(prompt, model, apiKey, cb) {
@@ -124,7 +128,8 @@ const server = http.createServer((req, res) => {
   if (req.method === 'GET' && req.url === '/keys') {
     const k = loadKeys();
     return res.end(JSON.stringify({
-      nvidia: !!k.nvidia, nara: !!k.nara, airforce: !!k.airforce, pollinations: !!k.pollinations, hf: !!k.hf
+      nvidia: !!k.nvidia, nara: !!k.nara, airforce: !!k.airforce, pollinations: !!k.pollinations, hf: !!k.hf,
+      groq: !!k.groq, cerebras: !!k.cerebras, zai: !!k.zai, siliconflow: !!k.siliconflow
     }));
   }
 
