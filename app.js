@@ -77,19 +77,34 @@ async function send() {
   messages.push({ role: 'user', content: text });
 
   try {
-    const r = await fetch(API + '/chat', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ provider, model, messages })
-    });
-    const d = await r.json();
-    typing.remove();
-    if (d.reply) {
-      addMessage(d.reply, 'bot');
+    if (provider === 'image') {
+      // Pollinations image generation
+      const encoded = encodeURIComponent(text);
+      const url = 'https://image.pollinations.ai/prompt/' + encoded + '?model=' + model + '&width=1024&height=1024';
+      typing.remove();
+      addMessage('🖼️ Görsel oluşturuluyor...', 'bot');
+      const imgDiv = document.createElement('div');
+      imgDiv.className = 'message bot';
+      imgDiv.innerHTML = '<img src="' + url + '" style="max-width:100%;border-radius:12px;" onload="this.style.display=\'block\'" />';
+      messagesEl.appendChild(imgDiv);
+      messagesEl.parentElement.scrollTop = messagesEl.parentElement.scrollHeight;
       chatHistory.push({ role: 'user', content: text });
-      chatHistory.push({ role: 'assistant', content: d.reply });
+      chatHistory.push({ role: 'assistant', content: 'Görsel üretildi: ' + text });
     } else {
-      addMessage('Hata: ' + (d.error || 'Yanıt alınamadı'), 'bot');
+      const r = await fetch(API + '/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ provider, model, messages })
+      });
+      const d = await r.json();
+      typing.remove();
+      if (d.reply) {
+        addMessage(d.reply, 'bot');
+        chatHistory.push({ role: 'user', content: text });
+        chatHistory.push({ role: 'assistant', content: d.reply });
+      } else {
+        addMessage('Hata: ' + (d.error || 'Yanıt alınamadı'), 'bot');
+      }
     }
   } catch(e) {
     typing.remove();
