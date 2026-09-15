@@ -119,6 +119,7 @@ function naraChat(task, context, key, cb) {
 // ===== NVIDIA NIM =====
 function nvidiaChat(task, context, key, cb) {
   const k = key || config.nvidiaKey || '';
+  console.log('[NVIDIA] İstek... Key:', k ? 'var' : 'YOK');
   if (!k) return cb(new Error('NVIDIA anahtarı yok'));
   const msgs = [];
   if (context) msgs.push({ role: 'system', content: context });
@@ -130,7 +131,7 @@ function nvidiaChat(task, context, key, cb) {
     path: '/v1/chat/completions',
     method: 'POST',
     headers: { 'Authorization': 'Bearer ' + k, 'Content-Type': 'application/json', 'Accept': 'application/json' },
-    timeout: 30000
+    timeout: 60000
   }, (res) => {
     let data = '';
     res.on('data', (c) => { data += c; });
@@ -148,8 +149,8 @@ function nvidiaChat(task, context, key, cb) {
       } catch(e) { console.log('[NVIDIA] Parse hatası:', e.message); cb(null, null); }
     });
   });
-  req.on('error', (e) => { console.log('[NVIDIA] Bağlantı hatası:', e.message); cb(e); });
-  req.on('timeout', () => req.destroy(new Error('timeout')));
+  req.on('error', (e) => { console.log('[NVIDIA] Hata:', e.message); cb(e); });
+  req.on('timeout', () => { console.log('[NVIDIA] TIMEOUT 60s!'); req.destroy(new Error('NVIDIA API timeout - 60 saniye')); });
   req.write(body);
   req.end();
 }
