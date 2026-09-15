@@ -151,7 +151,10 @@ async function sendMessage() {
       body: JSON.stringify({
         task: text,
         context: chatHistory.map(m => m.role + ': ' + m.content).join('\n'),
-        brain: activeBrain
+        brain: activeBrain,
+        nvidiaKey: nvidiaKey,
+        airforceKey: airforceKey,
+        naraKey: naraKey
       })
     });
 
