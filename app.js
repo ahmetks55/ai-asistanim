@@ -8,6 +8,640 @@ const connStatus = document.getElementById('connStatus');
 let chatHistory = [];
 let selectedModel = 'nara:agnes-2.5-flash';
 
+// ===== SAĞLAYICI BİLGİ VERİTABANI =====
+const PROVIDERS = {
+  nara: {
+    name: 'NaraRouter', icon: '🟢', color: '#22c55e',
+    why: 'NaraRouter, ücretsiz AI modellerine yönlendirme yapan bir API gateway\'dir. Tek bir key ile birden fazla modele erişebilirsiniz.',
+    url: 'https://nara.router.net',
+    urlText: 'nara.router.net',
+    keyFormat: 'sk-nry-...',
+    models: 'Hy3 Free, Agnes 2.5 Flash',
+    pricing: 'Tamamen ücretsiz',
+    limit: 'Sınırsız'
+  },
+  groq: {
+    name: 'Groq', icon: '⚡', color: '#f59e0b',
+    why: 'Groq, LPU (Language Processing Unit) donanımıyla çalışan ultra hızlı AI API\'sidir. Llama, Gemma ve DeepSeek modellerini milisaniye hızında çalıştırır.',
+    url: 'https://console.groq.com/keys',
+    urlText: 'console.groq.com',
+    keyFormat: 'gsk_...',
+    models: 'Llama 3.3 70B, Llama 3.1 8B, Gemma 2 9B, DeepSeek R1 70B',
+    pricing: 'Ücretsiz katman mevcut',
+    limit: '30 istek/dakika, 6000 istek/gün'
+  },
+  cerebras: {
+    name: 'Cerebras', icon: '🧠', color: '#8b5cf6',
+    why: 'Cerebras, wafer-scale çipleriyle çalışan AI inference platformudur. Llama modellerini en hızlı çalıştıran servislerden biridir.',
+    url: 'https://cloud.cerebras.ai/',
+    urlText: 'cloud.cerebras.ai',
+    keyFormat: 'csk-...',
+    models: 'Llama 3.3 70B, Llama 3.1 8B',
+    pricing: 'Ücretsiz katman mevcut',
+    limit: '1M token/gün'
+  },
+  zai: {
+    name: 'Z.ai (GLM)', icon: '🔵', color: '#3b82f6',
+    why: 'Zhipu AI\'ın geliştirdiği GLM modelleri, Çin merkezli güçlü open-source modellerdir. Görsel anlama desteği de sunar.',
+    url: 'https://open.bigmodel.cn/',
+    urlText: 'open.bigmodel.cn',
+    keyFormat: 'API Key...',
+    models: 'GLM 4.5 Flash, GLM 4.7 Flash',
+    pricing: 'Ücretsiz katman mevcut',
+    limit: 'API limitleri'
+  },
+  siliconflow: {
+    name: 'SiliconFlow', icon: '🌊', color: '#06b6d4',
+    why: 'SiliconFlow, açık kaynak modelleri ücretsiz sunan bir inference platformudur. DeepSeek V3 ve Qwen modellerini ücretsiz kullanabilirsiniz.',
+    url: 'https://cloud.siliconflow.cn/',
+    urlText: 'cloud.siliconflow.cn',
+    keyFormat: 'sk-...',
+    models: 'DeepSeek V3, Qwen3 8B',
+    pricing: 'Ücretsiz katman mevcut',
+    limit: '1000 istek/gün'
+  },
+  google: {
+    name: 'Google Gemini', icon: '🔴', color: '#ef4444',
+    why: 'Google\'ın en güçlü AI modelleri. 1M context window ile devasa metinleri işleyebilir. Görsel, video ve ses anlama desteği var.',
+    url: 'https://aistudio.google.com/apikey',
+    urlText: 'aistudio.google.com',
+    keyFormat: 'AIza...',
+    models: 'Gemini 2.5 Flash, Gemini 2.0 Flash, Gemma 3 27B',
+    pricing: 'Ücretsiz katman mevcut',
+    limit: '15 istek/dakika, 1500 istek/gün'
+  },
+  mistral: {
+    name: 'Mistral', icon: '🌀', color: '#f97316',
+    why: 'Fransa merkezli Mistral AI\'ın modelleri. Kod yazma uzmanı Codestral ve genel amaçlı Mistral Small ücretsiz sunuluyor.',
+    url: 'https://console.mistral.ai/api-keys/',
+    urlText: 'console.mistral.ai',
+    keyFormat: '...')
+    models: 'Mistral Small, Codestral, Devstral Small',
+    pricing: 'Ücretsiz katman mevcut',
+    limit: 'Ordu Roland ücretsiz'
+  },
+  cohere: {
+    name: 'Cohere', icon: '💎', color: '#10b981',
+    why: 'Cohere\'ın Command modelleri, RAG (Retrieval-Augmented Generation) ve araştırma görevlerinde mükemmeldir. Uzun belge analizi yapabilir.',
+    url: 'https://dashboard.cohere.com/api-keys',
+    urlText: 'dashboard.cohere.com',
+    keyFormat: '...',
+    models: 'Command A, Command R+',
+    pricing: 'Ücretsiz katman mevcut',
+    limit: '1000 istek/dakika'
+  },
+  deepseek: {
+    name: 'DeepSeek', icon: '🐋', color: '#6366f1',
+    why: 'DeepSeek, Çin merkezli AI araştırma şirketinin en güçlü modelleri. DeepSeek V3 ve R1, kod yazma ve mantıksal çıkarımda rakipsiz.',
+    url: 'https://platform.deepseek.com/api_keys',
+    urlText: 'platform.deepseek.com',
+    keyFormat: 'sk-...',
+    models: 'DeepSeek V3 (Chat), DeepSeek R1 (Reasoner)',
+    pricing: '$5 ücretsiz kredi',
+    limit: 'Kredi bitene kadar'
+  },
+  openrouter: {
+    name: 'OpenRouter', icon: '🔀', color: '#8b5cf6',
+    why: 'OpenRouter, 100+ AI modelini tek bir API ile sunar. Ücretsiz modeller de mevcuttur. Tek key ile tüm modellere erişim.',
+    url: 'https://openrouter.ai/settings/keys',
+    urlText: 'openrouter.ai',
+    keyFormat: 'sk-or-...',
+    models: '100+ model (Llama, Gemma, Mistral ücretsiz)',
+    pricing: 'Ücretsiz modeller + ücretli modeller',
+    limit: '20 istek/dk (ücretsiz modeller)'
+  },
+  cloudflare: {
+    name: 'Cloudflare Workers AI', icon: '☁️', color: '#f97316',
+    why: 'Cloudflare\'ın edge computing ağı üzerinde çalışan AI modelleri. Düşük gecikme süresi ve ücretsiz katman.',
+    url: 'https://dash.cloudflare.com/profile/api-tokens',
+    urlText: 'dash.cloudflare.com',
+    keyFormat: 'API Token...',
+    models: 'Llama 3.3 70B, Llama 3.1 8B',
+    pricing: 'Ücretsiz katman mevcut',
+    limit: '10K istek/gün'
+  },
+  scaleway: {
+    name: 'Scaleway', icon: '🏢', color: '#6366f1',
+    why: 'Avrupa merkezli bulut sağlayıcının AI inference hizmeti. GDPR uyumlu ve ücretsiz katman sunuyor.',
+    url: 'https://console.scaleway.com/iam/api-keys',
+    urlText: 'console.scaleway.com',
+    keyFormat: 'SCW...',
+    models: 'Llama 3.3 70B',
+    pricing: 'Ücretsiz katman mevcut',
+    limit: 'API limitleri'
+  },
+  together: {
+    name: 'Together AI', icon: '🤝', color: '#10b981',
+    why: 'Together AI, açık kaynak modellerini yüksek hızda sunar. Turbo modelleri ile hızlı inference.',
+    url: 'https://api.together.xyz/settings/api-keys',
+    urlText: 'api.together.xyz',
+    keyFormat: '...',
+    models: 'Llama 3.1 8B Turbo, Llama 3.3 70B Turbo, DeepSeek V3',
+    pricing: '$5 ücretsiz kredi',
+    limit: 'Kredi bitene kadar'
+  },
+  fireworks: {
+    name: 'Fireworks AI', icon: '🔥', color: '#ef4444',
+    why: 'Fireworks AI, ultra hızlı inference için optimize edilmiş modeller sunar. DeepSeek V3 ve Llama modelleri mevcut.',
+    url: 'https://fireworks.ai/account/api-keys',
+    urlText: 'fireworks.ai',
+    keyFormat: 'fw_...',
+    models: 'Llama 3.3 70B, DeepSeek V3',
+    pricing: 'Deneme kredisi mevcut',
+    limit: 'Kredi bitene kadar'
+  },
+  deepinfra: {
+    name: 'DeepInfra', icon: '📡', color: '#06b6d4',
+    why: 'DeepInfra, yüksek performanslı AI inference hizmeti sunar. Uygun fiyatlarla güçlü modeller.',
+    url: 'https://deepinfra.com/dash/api_keys',
+    urlText: 'deepinfra.com',
+    keyFormat: '...',
+    models: 'Llama 3.1 8B, Llama 3.3 70B',
+    pricing: '$5 ücretsiz kredi',
+    limit: 'Kredi bitene kadar'
+  },
+  novita: {
+    name: 'Novita AI', icon: '🚀', color: '#8b5cf6',
+    why: 'Novita AI, uygun fiyatlı AI inference hizmeti sunar. DeepSeek V3 ve Llama modelleri mevcut.',
+    url: 'https://novita.ai/settings/api-keys',
+    urlText: 'novita.ai',
+    keyFormat: '...',
+    models: 'DeepSeek V3, Llama 3.3 70B',
+    pricing: 'Ücretsiz deneme kredisi',
+    limit: 'Kredi bitene kadar'
+  },
+  ai21: {
+    name: 'AI21 Labs', icon: '🔬', color: '#f59e0b',
+    why: 'AI21 Labs\'ın Jamba modelleri, 256K context window ile uzun metinleri işleyebilir. Hybrid Mimari ile güçlü performans.',
+    url: 'https://www.ai11labs.com/pricing#api-key',
+    urlText: 'ai21labs.com',
+    keyFormat: '...',
+    models: 'Jamba 1.5 Large, Jamba 1.5 Mini',
+    pricing: 'Ücretsiz deneme',
+    limit: 'Deneme kredisi'
+  },
+  upstage: {
+    name: 'Upstage', icon: '☀️', color: '#f59e0b',
+    why: 'Upstage\'ın Solar Pro modeli, güçlü ve uygun fiyatlı bir AI modeli. Kore merkezli şirket.',
+    url: 'https://console.upstage.ai/',
+    urlText: 'console.upstage.ai',
+    keyFormat: '...',
+    models: 'Solar Pro 2',
+    pricing: 'Ücretsiz deneme',
+    limit: 'Deneme kredisi'
+  },
+  reka: {
+    name: 'Reka', icon: '🔮', color: '#8b5cf6',
+    why: 'Reka\'nın modelleri görsel anlama ve uzun bağlam işleme güçlü. Flash ve Core modelleri mevcut.',
+    url: 'https://platform.reka.ai/',
+    urlText: 'platform.reka.ai',
+    keyFormat: '...',
+    models: 'Reka Flash, Reka Core',
+    pricing: 'Ücretsiz deneme',
+    limit: 'Deneme kredisi'
+  },
+  nebius: {
+    name: 'Nebius', icon: '🌐', color: '#06b6d4',
+    why: 'Nebius, yüksek performanslı GPU altyapısıyla AI inference sunar. Qwen ve Llama modelleri mevcut.',
+    url: 'https://studio.nebius.com/api-keys',
+    urlText: 'studio.nebius.com',
+    keyFormat: '...',
+    models: 'Llama 3.1 8B, Qwen 2.5 72B',
+    pricing: 'Ücretsiz deneme',
+    limit: 'Deneme kredisi'
+  },
+  baseten: {
+    name: 'Baseten', icon: '⬛', color: '#333',
+    why: 'Baseten, ML modellerini production\'a deploy eden platform. Llama modelleri sunuyor.',
+    url: 'https://app.baseten.co/settings/api-keys',
+    urlText: 'baseten.co',
+    keyFormat: '...',
+    models: 'Llama 3.1 8B',
+    pricing: 'Ücretsiz deneme',
+    limit: 'Deneme kredisi'
+  },
+  sambanova: {
+    name: 'SambaNova', icon: '🟣', color: '#a855f7',
+    why: 'SambaNova, özel donanımında çalışan ultra hızlı AI inference sunar. Llama 3.3 70B ücretsiz.',
+    url: 'https://cloud.sambanova.ai/apis',
+    urlText: 'cloud.sambanova.ai',
+    keyFormat: '...',
+    models: 'Llama 3.3 70B',
+    pricing: 'Ücretsiz deneme',
+    limit: 'Deneme kredisi'
+  },
+  xai: {
+    name: 'xAI (Grok)', icon: '✖️', color: '#fff',
+    why: 'Elon Musk\'ın xAI şirketinin Grok modeli. Güncel olaylar hakkında bilgisi var, Twitter verilerinden öğreniyor.',
+    url: 'https://console.x.ai/',
+    urlText: 'console.x.ai',
+    keyFormat: 'xai-...',
+    models: 'Grok 2',
+    pricing: 'Ücretsiz deneme kredisi',
+    limit: 'Kredi bitene kadar'
+  },
+  perplexity: {
+    name: 'Perplexity', icon: '🔍', color: '#06b6d4',
+    why: 'Perplexity\'in Sonar modeli, web araması yapabilen tek AI modeli. Gerçek zamanlı bilgiye erişebilir.',
+    url: 'https://www.perplexity.ai/settings/api',
+    urlText: 'perplexity.ai',
+    keyFormat: 'pplx-...',
+    models: 'Sonar Pro (Web Aramalı)',
+    pricing: 'Ücretsiz deneme kredisi',
+    limit: 'Kredi bitene kadar'
+  },
+  openai: {
+    name: 'OpenAI', icon: '🤖', color: '#10b981',
+    why: 'OpenAI\'ın GPT modelleri, dünyanın en popüler AI modelleri. GPT-4o Mini ücretsiz deneme ile mevcut.',
+    url: 'https://platform.openai.com/api-keys',
+    urlText: 'platform.openai.com',
+    keyFormat: 'sk-...',
+    models: 'GPT-4o Mini',
+    pricing: 'Ücretsiz deneme kredisi',
+    limit: 'Kredi bitene kadar'
+  },
+  anthropic: {
+    name: 'Anthropic', icon: '🟤', color: '#d97706',
+    why: 'Anthropic\'in Claude modelleri, güvenlik odaklı ve güçlü AI modelleri. Hızlı Haiku modeli ücretsiz deneme mevcut.',
+    url: 'https://console.anthropic.com/',
+    urlText: 'console.anthropic.com',
+    keyFormat: 'sk-ant-...',
+    models: 'Claude 3.5 Haiku',
+    pricing: 'Ücretsiz deneme kredisi',
+    limit: 'Kredi bitene kadar'
+  },
+  venice: {
+    name: 'Venice AI', icon: '🎭', color: '#ef4444',
+    why: 'Venice AI, gizlilik odaklı AI inference sunar. Log tutmaz ve ücretsiz Llama modelleri sunar.',
+    url: 'https://venice.ai/settings',
+    urlText: 'venice.ai',
+    keyFormat: '...',
+    models: 'Llama 3.3 70B',
+    pricing: 'Ücretsiz',
+    limit: 'API limitleri'
+  },
+  minimax: {
+    name: 'MiniMax', icon: '📏', color: '#f59e0b',
+    why: 'MiniMax\'ın Text 01 modeli, 4M context window ile devasa metinleri işleyebilir. Dünyanın en uzun bağlamına sahip.',
+    url: 'https://www.minimaxi.com/',
+    urlText: 'minimaxi.com',
+    keyFormat: '...',
+    models: 'MiniMax Text 01 (4M context)',
+    pricing: 'Ücretsiz deneme',
+    limit: 'Deneme kredisi'
+  },
+  moonshot: {
+    name: 'Moonshot AI', icon: '🌙', color: '#f59e0b',
+    why: 'Moonshot AI, Çin merkezli AI şirketi. Kimi modelleri uzun belge analizinde güçlü.',
+    url: 'https://platform.moonshot.cn/',
+    urlText: 'platform.moonshot.cn',
+    keyFormat: '...',
+    models: 'Moonshot V1 8K',
+    pricing: 'Ücretsiz deneme',
+    limit: 'Deneme kredisi'
+  },
+  stepfun: {
+    name: 'StepFun', icon: '🪜', color: '#8b5cf6',
+    why: 'StepFun, Çin merkezli AI şirketi. Step modelleri genel amaçlı kullanıma uygun.',
+    url: 'https://platform.stepfun.com/',
+    urlText: 'platform.stepfun.com',
+    keyFormat: '...',
+    models: 'Step 1 8K',
+    pricing: 'Ücretsiz deneme',
+    limit: 'Deneme kredisi'
+  },
+  zhipu: {
+    name: 'Zhipu AI', icon: '🔮', color: '#6366f1',
+    why: 'Zhipu AI, GLM modellerini geliştiren Çinli şirket. Görsel anlama desteği var.',
+    url: 'https://open.bigmodel.cn/',
+    urlText: 'open.bigmodel.cn',
+    keyFormat: '...',
+    models: 'GLM 4 Flash',
+    pricing: 'Ücretsiz deneme',
+    limit: 'Deneme kredisi'
+  },
+  volcengine: {
+    name: 'Volcengine', icon: '🌋', color: '#ef4444',
+    why: 'ByteDance\'ın bulut platformu Doubao modellerini sunar. 256K context.',
+    url: 'https://console.volcengine.com/',
+    urlText: 'console.volcengine.com',
+    keyFormat: '...',
+    models: 'Doubao Pro 256K',
+    pricing: 'Ücretsiz deneme',
+    limit: 'Deneme kredisi'
+  },
+  alibaba: {
+    name: 'Alibaba Qwen', icon: '🟠', color: '#f97316',
+    why: 'Alibaba\'ın Qwen modelleri, güçlü open-source modeller. Qwen Max en üst düzey model.',
+    url: 'https://dashscope.console.aliyun.com/',
+    urlText: 'dashscope.aliyun.com',
+    keyFormat: 'sk-...',
+    models: 'Qwen Max, Qwen Plus',
+    pricing: 'Ücretsiz deneme kredisi',
+    limit: 'Kredi bitene kadar'
+  },
+  baidu: {
+    name: 'Baidu ERNIE', icon: '🔵', color: '#3b82f6',
+    why: 'Baidu\'nun ERNIE modelleri, Çince doğal dil işlemede uzman. Çin pazarı için güçlü.',
+    url: 'https://console.bce.baidu.com/qianfan/ais/console/applicationConsole/application',
+    urlText: 'console.bce.baidu.com',
+    keyFormat: '...',
+    models: 'ERNIE 4.0 Turbo',
+    pricing: 'Ücretsiz deneme',
+    limit: 'Deneme kredisi'
+  },
+  sensenova: {
+    name: 'SenseNova', icon: '🧬', color: '#10b981',
+    why: 'SenseTime\'ın SenseNova modeli, çok modlu AI yetenekleri sunar.',
+    url: 'https://platform.sensenova.cn/',
+    urlText: 'platform.sensenova.cn',
+    keyFormat: '...',
+    models: 'SenseChat 5',
+    pricing: 'Ücretsiz deneme',
+    limit: 'Deneme kredisi'
+  },
+  xiaomi: {
+    name: 'Xiaomi', icon: '📱', color: '#f97316',
+    why: 'Xiaomi\'nin AI modeli MiLM, mobil cihazlar için optimize edilmiş.',
+    url: 'https://open.ai.xiaomi.com/',
+    urlText: 'open.ai.xiaomi.com',
+    keyFormat: '...',
+    models: 'MiLM 6B',
+    pricing: 'Ücretsiz deneme',
+    limit: 'Deneme kredisi'
+  },
+  tencent: {
+    name: 'Tencent', icon: '🐧', color: '#06b6d4',
+    why: 'Tencent\'ın Hunyuan modeli, çok modlu AI yetenekleri sunar. Görsel anlama var.',
+    url: 'https://console.cloud.tencent.com/hunyuan',
+    urlText: 'console.cloud.tencent.com',
+    keyFormat: '...',
+    models: 'Hunyuan Pro',
+    pricing: 'Ücretsiz deneme',
+    limit: 'Deneme kredisi'
+  },
+  bytedance: {
+    name: 'ByteDance', icon: '🎵', color: '#ef4444',
+    why: 'ByteDance\'ın Doubao modelleri, uzun context desteği sunar. TikTok\'un ana şirketi.',
+    url: 'https://console.volcengine.com/',
+    urlText: 'console.volcengine.com',
+    keyFormat: '...',
+    models: 'Doubao Pro 256K',
+    pricing: 'Ücretsiz deneme',
+    limit: 'Deneme kredisi'
+  },
+  github: {
+    name: 'GitHub Models', icon: '🐙', color: '#333',
+    why: 'GitHub\'ın AI model marketplace\'i. Ücretsiz Llama, Phi ve Mistral modelleri.',
+    url: 'https://github.com/settings/tokens',
+    urlText: 'github.com/settings/tokens',
+    keyFormat: 'ghp_...',
+    models: 'Llama 3.1 8B, Phi 3.5 Mini, Mistral Large',
+    pricing: 'Ücretsiz',
+    limit: '15 istek/dakika'
+  },
+  llm7: {
+    name: 'LLM7.io', icon: '7️⃣', color: '#8b5cf6',
+    why: 'LLM7.io, ücretsiz AI modelleri sunan basit bir API platformu.',
+    url: 'https://llm7.io',
+    urlText: 'llm7.io',
+    keyFormat: '...',
+    models: 'Llama 3.1 8B, Mistral 7B',
+    pricing: 'Ücretsiz',
+    limit: 'Sınırsız'
+  },
+  ovhcloud: {
+    name: 'OVHcloud', icon: '🌍', color: '#10b981',
+    why: 'Avrupa merkezli bulut sağlayıcının AI hizmeti. GDPR uyumlu ücretsiz modeller.',
+    url: 'https://api.us.ovhcloud.com/',
+    urlText: 'ovhcloud.com',
+    keyFormat: '...',
+    models: 'Llama 3.3 70B, Mistral Large',
+    pricing: 'Ücretsiz',
+    limit: 'API limitleri'
+  },
+  ollama: {
+    name: 'Ollama', icon: '🦙', color: '#333',
+    why: 'Ollama ile modelleri kendi bilgisayarınızda çalıştırabilirsiniz. İnternet bağlantısı gerektirmez.',
+    url: 'https://ollama.com',
+    urlText: 'ollama.com',
+    keyFormat: 'Yerel kurulum gerekli',
+    models: 'Llama 3.1, Gemma 2 (yerel)',
+    pricing: 'Tamamen ücretsiz (yerel)',
+    limit: 'Sınırsız (donanıma bağlı)'
+  },
+  nvidia: {
+    name: 'NVIDIA NIM', icon: '💚', color: '#22c55e',
+    why: 'NVIDIA\'nın inference platformu. DeepSeek V4 Flash modelini sunar. Güçlü GPU altyapısı.',
+    url: 'https://build.nvidia.com/',
+    urlText: 'build.nvidia.com',
+    keyFormat: 'nvapi-...',
+    models: 'DeepSeek V4 Flash',
+    pricing: 'Ücretsiz deneme',
+    limit: 'API limitleri'
+  },
+  airforce: {
+    name: 'Airforce', icon: '✈️', color: '#06b6d4',
+    why: 'Airforce, ücretsiz AI modelleri sunan bir API gateway\'i. MiMo v2.5 Pro mevcut.',
+    url: 'https://airforce.ai',
+    urlText: 'airforce.ai',
+    keyFormat: '...',
+    models: 'MiMo v2.5 Pro',
+    pricing: 'Ücretsiz',
+    limit: 'API limitleri'
+  },
+  agnes: {
+    name: 'Agnes AI', icon: '💎', color: '#8b5cf6',
+    why: 'Agnes AI, ücretsiz sohbet modelleri sunan platform. Sınırsız kullanım.',
+    url: 'https://agnes.ai',
+    urlText: 'agnes.ai',
+    keyFormat: '...',
+    models: 'Agnes 2.5 Flash',
+    pricing: 'Ücretsiz',
+    limit: 'Sınırsız'
+  },
+  puter: {
+    name: 'Puter', icon: '🖥️', color: '#10b981',
+    why: 'Puter, ücretsiz GPT-4o Mini erişimi sunan platform.',
+    url: 'https://puter.com',
+    urlText: 'puter.com',
+    keyFormat: '...',
+    models: 'GPT-4o Mini',
+    pricing: 'Ücretsiz',
+    limit: 'API limitleri'
+  },
+  wandb: {
+    name: 'W&B Inference', icon: '📊', color: '#f59e0b',
+    why: 'Weights & Biases inference hizmeti. Ücretsiz Llama 3.3 70B modeli sunar.',
+    url: 'https://wandb.ai/authorize',
+    urlText: 'wandb.ai',
+    keyFormat: 'wandb-...',
+    models: 'Llama 3.3 70B',
+    pricing: 'Ücretsiz',
+    limit: 'API limitleri'
+  },
+  replicate: {
+    name: 'Replicate', icon: '🔄', color: '#333',
+    why: 'Replicate, open-source modelleri bulutta çalıştıran platform. Farklı model türleri sunar.',
+    url: 'https://replicate.com/account/api-tokens',
+    urlText: 'replicate.com',
+    keyFormat: 'r8_...',
+    models: 'Llama 3.1 8B',
+    pricing: 'Ücretsiz deneme kredisi',
+    limit: 'Kredi bitene kadar'
+  },
+  hyperbolic: {
+    name: 'Hyperbolic', icon: '📐', color: '#f97316',
+    why: 'Hyperbolic, uygun fiyatlı AI inference sunar. DeepSeek V3 ve Llama modelleri mevcut.',
+    url: 'https://hyperbolic.xyz/',
+    urlText: 'hyperbolic.xyz',
+    keyFormat: '...',
+    models: 'Llama 3.1 8B, DeepSeek V3',
+    pricing: 'Ücretsiz deneme kredisi',
+    limit: 'Kredi bitene kadar'
+  },
+  kluster: {
+    name: 'Kluster.ai', icon: '🧩', color: '#6366f1',
+    why: 'Kluster.ai, hızlı AI inference sunar. Llama 3.3 70B modeli mevcut.',
+    url: 'https://kluster.ai',
+    urlText: 'kluster.ai',
+    keyFormat: '...',
+    models: 'Llama 3.3 70B',
+    pricing: 'Ücretsiz deneme',
+    limit: 'Deneme kredisi'
+  },
+  friendli: {
+    name: 'Friendli', icon: '😊', color: '#10b981',
+    why: 'Friendli, performans odaklı AI inference sunar. Llama modelleri mevcut.',
+    url: 'https://friendli.ai/',
+    urlText: 'friendli.ai',
+    keyFormat: 'fl-...',
+    models: 'Llama 3.1 8B',
+    pricing: 'Ücretsiz deneme',
+    limit: 'Deneme kredisi'
+  },
+  lepton: {
+    name: 'Lepton AI', icon: '⚡', color: '#f59e0b',
+    why: 'Lepton AI, hızlı ve uygun fiyatlı inference sunar.',
+    url: 'https://www.lepton.ai/',
+    urlText: 'lepton.ai',
+    keyFormat: '...',
+    models: 'Llama 3.1 8B',
+    pricing: 'Ücretsiz deneme',
+    limit: 'Deneme kredisi'
+  },
+  anyscale: {
+    name: 'Anyscale', icon: '♾️', color: '#8b5cf6',
+    why: 'Anyscale, Ray üzerinde çalışan AI modelleri sunar. Ölçeklenebilir inference.',
+    url: 'https://www.anyscale.com/',
+    urlText: 'anyscale.com',
+    keyFormat: '...',
+    models: 'Llama 3.1 8B',
+    pricing: 'Ücretsiz deneme',
+    limit: 'Deneme kredisi'
+  },
+  chutes: {
+    name: 'Chutes.ai', icon: '🪂', color: '#06b6d4',
+    why: 'Chutes.ai, ücretsiz Llama modelleri sunar.',
+    url: 'https://chutes.ai',
+    urlText: 'chutes.ai',
+    keyFormat: '...',
+    models: 'Llama 3.3 70B',
+    pricing: 'Ücretsiz',
+    limit: 'API limitleri'
+  },
+  glhf: {
+    name: 'Glhf.chat', icon: '👋', color: '#10b981',
+    why: 'Glhf.chat, ücretsiz AI modelleri sunan sohbet platformu.',
+    url: 'https://glhf.chat',
+    urlText: 'glhf.chat',
+    keyFormat: '...',
+    models: 'Llama 3.1 8B',
+    pricing: 'Ücretsiz',
+    limit: 'API limitleri'
+  },
+  nscale: {
+    name: 'Nscale', icon: '📊', color: '#f59e0b',
+    why: 'Nscale, ölçeklenebilir AI inference sunar.',
+    url: 'https://nscale.com',
+    urlText: 'nscale.com',
+    keyFormat: '...',
+    models: 'Llama 3.3 70B',
+    pricing: 'Ücretsiz',
+    limit: 'API limitleri'
+  },
+  iflow: {
+    name: 'iFlow', icon: '💧', color: '#06b6d4',
+    why: 'iFlow, ücretsiz AI modelleri sunar.',
+    url: 'https://iflow.com',
+    urlText: 'iflow.com',
+    keyFormat: '...',
+    models: 'Llama 3.1 8B',
+    pricing: 'Ücretsiz',
+    limit: 'API limitleri'
+  },
+  aiml: {
+    name: 'AIML API', icon: '🤖', color: '#8b5cf6',
+    why: 'AIML API, ücretsiz AI modelleri sunan platform.',
+    url: 'https://aimlapi.com',
+    urlText: 'aimlapi.com',
+    keyFormat: '...',
+    models: 'Llama 3.1 8B',
+    pricing: 'Ücretsiz',
+    limit: 'API limitleri'
+  },
+  nagaai: {
+    name: 'NagaAI', icon: '🐉', color: '#22c55e',
+    why: 'NagaAI, ücretsiz AI modelleri sunar.',
+    url: 'https://nagaai.com',
+    urlText: 'nagaai.com',
+    keyFormat: '...',
+    models: 'Llama 3.1 8B',
+    pricing: 'Ücretsiz',
+    limit: 'API limitleri'
+  },
+  paxsenix: {
+    name: 'PaxSenix', icon: '☮️', color: '#10b981',
+    why: 'PaxSenix, ücretsiz AI modelleri sunar.',
+    url: 'https://paxsenix.com',
+    urlText: 'paxsenix.com',
+    keyFormat: '...',
+    models: 'Llama 3.1 8B',
+    pricing: 'Ücretsiz',
+    limit: 'API limitleri'
+  },
+  aihubmix: {
+    name: 'AIHubMix', icon: '🔀', color: '#f59e0b',
+    why: 'AIHubMix, çeşitli AI modellerini bir arada sunar.',
+    url: 'https://aihubmix.com',
+    urlText: 'aihubmix.com',
+    keyFormat: '...',
+    models: 'GPT-4o Mini',
+    pricing: 'Ücretsiz deneme',
+    limit: 'Deneme kredisi'
+  },
+  arcee: {
+    name: 'Arcee AI', icon: '🎨', color: '#f97316',
+    why: 'Arcee AI, enterprise AI çözümleri sunar.',
+    url: 'https://www.arcee.ai/',
+    urlText: 'arcee.ai',
+    keyFormat: '...',
+    models: 'Llama 3.1 8B',
+    pricing: 'Ücretsiz',
+    limit: 'API limitleri'
+  },
+  pydantic: {
+    name: 'Pydantic AI GW', icon: '🛡️', color: '#22c55e',
+    why: 'Pydantic AI Gateway, güvenli API yönlendirmesi sunar.',
+    url: 'https://ai.pydantic.dev/',
+    urlText: 'ai.pydantic.dev',
+    keyFormat: '...',
+    models: 'Llama 3.1 8B',
+    pricing: 'Ücretsiz',
+    limit: 'API limitleri'
+  },
+};
+
 // ===== MODEL VERİTABANI =====
 // rating: 1-10 (10=en iyi), price: 'ucretsiz'|'ucretli'|'deneme',
 // limits: dakika/gun limiti, caps: yapabildikleri isler
@@ -338,13 +972,90 @@ document.getElementById('settingsBtn').onclick = () => document.getElementById('
 document.getElementById('closeSettings').onclick = () => document.getElementById('settingsModal').style.display = 'none';
 document.getElementById('settingsModal').onclick = (e) => { if (e.target.id === 'settingsModal') e.target.style.display = 'none'; };
 
-// Provider toggle
-function toggleProvider(who) {
-  const card = document.querySelector('[onclick="toggleProvider(\'' + who + '\')"]');
-  card.classList.toggle('open');
-}
-window.toggleProvider = toggleProvider;
+let savedKeys = {};
+let currentProvider = '';
 
+// Provider grid oluştur
+function initProviderGrid() {
+  const grid = document.getElementById('providerGrid');
+  let html = '';
+  Object.entries(PROVIDERS).forEach(([key, p]) => {
+    html += '<div class="pg-card" onclick="openProviderModal(\'' + key + '\')">'
+      + '<span class="pg-icon">' + p.icon + '</span>'
+      + '<span class="pg-name">' + p.name + '</span>'
+      + '<span class="pg-status" id="pg-' + key + '">✗</span>'
+      + '</div>';
+  });
+  grid.innerHTML = html;
+  updateProviderStatuses();
+}
+
+function updateProviderStatuses() {
+  Object.keys(PROVIDERS).forEach(key => {
+    const el = document.getElementById('pg-' + key);
+    if (el) {
+      el.textContent = savedKeys[key] ? '✓' : '✗';
+      el.className = 'pg-status' + (savedKeys[key] ? ' active' : '');
+    }
+  });
+}
+
+// Provider modal aç
+window.openProviderModal = function(who) {
+  const p = PROVIDERS[who];
+  if (!p) return;
+  currentProvider = who;
+  document.getElementById('pmIcon').textContent = p.icon;
+  document.getElementById('pmName').textContent = p.name;
+  document.getElementById('pmBadge').textContent = savedKeys[who] ? '✓ Kayıtlı' : '✗ Kayıtlı Değil';
+  document.getElementById('pmBadge').className = 'pm-badge' + (savedKeys[who] ? ' active' : '');
+  document.getElementById('pmWhy').textContent = p.why;
+  document.getElementById('pmUrl').textContent = p.urlText;
+  document.getElementById('pmUrl').href = p.url;
+  document.getElementById('pmModels').textContent = p.models;
+  document.getElementById('pmPricing').textContent = p.pricing;
+  document.getElementById('pmLimit').textContent = p.limit;
+  document.getElementById('pmKeyFormat').textContent = p.keyFormat;
+  document.getElementById('pmKeyInput').value = savedKeys[who] ? '••••••••' : '';
+  document.getElementById('pmStatus').textContent = '';
+  document.getElementById('providerModal').style.display = 'flex';
+};
+
+document.getElementById('closeProviderModal').onclick = () => document.getElementById('providerModal').style.display = 'none';
+document.getElementById('providerModal').onclick = (e) => { if (e.target.id === 'providerModal') e.target.style.display = 'none'; };
+
+// Provider key kaydet
+window.saveProviderKey = function() {
+  const val = document.getElementById('pmKeyInput').value.trim();
+  const statusEl = document.getElementById('pmStatus');
+  if (!val || val === '••••••••') { statusEl.textContent = 'Boş bırakılamaz'; statusEl.className = 'status-text error'; return; }
+  fetch(API + '/save-key', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ provider: currentProvider, key: val })
+  }).then(r => r.json()).then(d => {
+    if (d.ok) {
+      statusEl.textContent = '✓ Kaydedildi';
+      statusEl.className = 'status-text success';
+      document.getElementById('pmKeyInput').value = '••••••••';
+      savedKeys[currentProvider] = true;
+      updateProviderStatuses();
+      document.getElementById('pmBadge').textContent = '✓ Kayıtlı';
+      document.getElementById('pmBadge').className = 'pm-badge active';
+    }
+  }).catch(() => {
+    statusEl.textContent = '✗ Köprü bağlı değil';
+    statusEl.className = 'status-text error';
+  });
+};
+
+// Key yükle
+fetch(API + '/keys').then(r => r.json()).then(d => {
+  savedKeys = d;
+  updateProviderStatuses();
+}).catch(() => {});
+
+// Legacy updateBadge fonksiyonu (dropdown için)
 function updateBadge(who, saved) {
   const badge = document.getElementById(who + 'Badge');
   if (badge) {
@@ -352,214 +1063,6 @@ function updateBadge(who, saved) {
     badge.className = 'provider-badge' + (saved ? ' active' : '');
   }
 }
-
-// Key yükle
-fetch(API + '/keys').then(r => r.json()).then(d => {
-  document.getElementById('naraKey').value = d.nara ? '••••••••' : '';
-  document.getElementById('nvidiaKey').value = d.nvidia ? '••••••••' : '';
-  document.getElementById('airforceKey').value = d.airforce ? '••••••••' : '';
-  document.getElementById('pollinationsKey').value = d.pollinations ? '••••••••' : '';
-  document.getElementById('hfKey').value = d.hf ? '••••••••' : '';
-  document.getElementById('groqKey').value = d.groq ? '••••••••' : '';
-  document.getElementById('cerebrasKey').value = d.cerebras ? '••••••••' : '';
-  document.getElementById('zaiKey').value = d.zai ? '••••••••' : '';
-  document.getElementById('siliconflowKey').value = d.siliconflow ? '••••••••' : '';
-  document.getElementById('googleKey').value = d.google ? '••••••••' : '';
-  document.getElementById('mistralKey').value = d.mistral ? '••••••••' : '';
-  document.getElementById('cohereKey').value = d.cohere ? '••••••••' : '';
-  document.getElementById('deepseekKey').value = d.deepseek ? '••••••••' : '';
-  document.getElementById('openrouterKey').value = d.openrouter ? '••••••••' : '';
-  document.getElementById('cloudflareKey').value = d.cloudflare ? '••••••••' : '';
-  document.getElementById('scalewayKey').value = d.scaleway ? '••••••••' : '';
-  document.getElementById('togetherKey').value = d.together ? '••••••••' : '';
-  document.getElementById('fireworksKey').value = d.fireworks ? '••••••••' : '';
-  document.getElementById('deepinfraKey').value = d.deepinfra ? '••••••••' : '';
-  document.getElementById('novitaKey').value = d.novita ? '••••••••' : '';
-  document.getElementById('ai21Key').value = d.ai21 ? '••••••••' : '';
-  document.getElementById('upstageKey').value = d.upstage ? '••••••••' : '';
-  document.getElementById('rekaKey').value = d.reka ? '••••••••' : '';
-  document.getElementById('nebiusKey').value = d.nebius ? '••••••••' : '';
-  document.getElementById('basetenKey').value = d.baseten ? '••••••••' : '';
-  document.getElementById('sambanovaKey').value = d.sambanova ? '••••••••' : '';
-  document.getElementById('xaiKey').value = d.xai ? '••••••••' : '';
-  document.getElementById('perplexityKey').value = d.perplexity ? '••••••••' : '';
-  document.getElementById('openaiKey').value = d.openai ? '••••••••' : '';
-  document.getElementById('anthropicKey').value = d.anthropic ? '••••••••' : '';
-  document.getElementById('veniceKey').value = d.venice ? '••••••••' : '';
-  document.getElementById('minimaxKey').value = d.minimax ? '••••••••' : '';
-  document.getElementById('moonshotKey').value = d.moonshot ? '••••••••' : '';
-  document.getElementById('stepfunKey').value = d.stepfun ? '••••••••' : '';
-  document.getElementById('zhipuKey').value = d.zhipu ? '••••••••' : '';
-  document.getElementById('volcengineKey').value = d.volcengine ? '••••••••' : '';
-  document.getElementById('alibabaKey').value = d.alibaba ? '••••••••' : '';
-  document.getElementById('baiduKey').value = d.baidu ? '••••••••' : '';
-  document.getElementById('sensenovaKey').value = d.sensenova ? '••••••••' : '';
-  document.getElementById('xiaomiKey').value = d.xiaomi ? '••••••••' : '';
-  document.getElementById('tencentKey').value = d.tencent ? '••••••••' : '';
-  document.getElementById('bytedanceKey').value = d.bytedance ? '••••••••' : '';
-  document.getElementById('githubKey').value = d.github ? '••••••••' : '';
-  document.getElementById('llm7Key').value = d.llm7 ? '••••••••' : '';
-  document.getElementById('ovhcloudKey').value = d.ovhcloud ? '••••••••' : '';
-  document.getElementById('ollamaKey').value = d.ollama ? '••••••••' : '';
-  document.getElementById('kiloKey').value = d.kilo ? '••••••••' : '';
-  document.getElementById('opencodezenKey').value = d.opencodezen ? '••••••••' : '';
-  document.getElementById('aionlabsKey').value = d.aionlabs ? '••••••••' : '';
-  document.getElementById('agnesKey').value = d.agnes ? '••••••••' : '';
-  document.getElementById('chutesKey').value = d.chutes ? '••••••••' : '';
-  document.getElementById('glhfKey').value = d.glhf ? '••••••••' : '';
-  document.getElementById('nscaleKey').value = d.nscale ? '••••••••' : '';
-  document.getElementById('hyperbolicKey').value = d.hyperbolic ? '••••••••' : '';
-  document.getElementById('iflowKey').value = d.iflow ? '••••••••' : '';
-  document.getElementById('klusterKey').value = d.kluster ? '••••••••' : '';
-  document.getElementById('friendliKey').value = d.friendli ? '••••••••' : '';
-  document.getElementById('leptonKey').value = d.lepton ? '••••••••' : '';
-  document.getElementById('anyscaleKey').value = d.anyscale ? '••••••••' : '';
-  document.getElementById('puterKey').value = d.puter ? '••••••••' : '';
-  document.getElementById('aimlKey').value = d.aiml ? '••••••••' : '';
-  document.getElementById('nagaaiKey').value = d.nagaai ? '••••••••' : '';
-  document.getElementById('paxsenixKey').value = d.paxsenix ? '••••••••' : '';
-  document.getElementById('aihubmixKey').value = d.aihubmix ? '••••••••' : '';
-  document.getElementById('fastrouterKey').value = d.fastrouter ? '••••••••' : '';
-  document.getElementById('literouterKey').value = d.literouter ? '••••••••' : '';
-  document.getElementById('swiftrouterKey').value = d.swiftrouter ? '••••••••' : '';
-  document.getElementById('unorouterKey').value = d.unorouter ? '••••••••' : '';
-  document.getElementById('voidaiKey').value = d.voidai ? '••••••••' : '';
-  document.getElementById('valorgptKey').value = d.valorgpt ? '••••••••' : '';
-  document.getElementById('zenllmKey').value = d.zenllm ? '••••••••' : '';
-  document.getElementById('resurgeKey').value = d.resurge ? '••••••••' : '';
-  document.getElementById('subaxisKey').value = d.subaxis ? '••••••••' : '';
-  document.getElementById('routewayKey').value = d.routeway ? '••••••••' : '';
-  document.getElementById('requestyKey').value = d.requesty ? '••••••••' : '';
-  document.getElementById('aipooledKey').value = d.aipooled ? '••••••••' : '';
-  document.getElementById('llmgatewayKey').value = d.llmgateway ? '••••••••' : '';
-  document.getElementById('studiolmKey').value = d.studiolm ? '••••••••' : '';
-  document.getElementById('pixazoKey').value = d.pixazo ? '••••••••' : '';
-  document.getElementById('yingsuanKey').value = d.yingsuan ? '••••••••' : '';
-  document.getElementById('xevenKey').value = d.xeven ? '••••••••' : '';
-  document.getElementById('ofoxKey').value = d.ofox ? '••••••••' : '';
-  document.getElementById('mnnaiKey').value = d.mnnai ? '••••••••' : '';
-  document.getElementById('wandbKey').value = d.wandb ? '••••••••' : '';
-  document.getElementById('replicateKey').value = d.replicate ? '••••••••' : '';
-  document.getElementById('arceeKey').value = d.arcee ? '••••••••' : '';
-  document.getElementById('subnpKey').value = d.subnp ? '••••••••' : '';
-  document.getElementById('aichixiaKey').value = d.aichixia ? '••••••••' : '';
-  document.getElementById('pydanticKey').value = d.pydantic ? '••••••••' : '';
-  const newProviders = ['opencodego','302ai','abacus','above','agentrouter','airouter','aixy','akio','alibabachina','ambient','amd','anyapi','atomicchat','auriko','azure','bailing','berget','blueclaw','bothub','charmhyper','clarifai','claudinio','clinepass','cloudferro','coralbricks','cortecs','crofai','crossmodel','crusoe','daoxe','databricks','devpass','dinference','digitalocean','ebcloud','echo','edenai','empiriolabs','evroc','freemodel','frogbot','gitlabduo','gmicloud','greenpt','helicone','hetzner','hpc','impossibl','inception','inceptron','inferflow7','inference','inferx','infomaniak','ionet','iteracompute','jalapeno','jiekou','kenari','kimifor','klok','kosmik','kuae','lilac','llama','llmtech','llmtr','lmstudio','longcat','lucidquery','lynkr','meganova','melious','mergegateway','meta','mixlayer','moark','modal','modeloracle','modelis','modelscope','morph','nrouter','nan','nanogpt','nearai','neosmith','neuralwatt','nova','openreason','opper','orcarouter','pendra','pioneer','poe','poolside','privatemode','qihang','qiniu','qvac','regolo','routingrun','runinfra','sakana','saladcloud','sapai','sarvam','scxai','snowflake','stackit','standardcompute','subconscious','submodel','synthetic','tencenttoken','tencenttokenhub','tensorx','thegrid','thinkingmachines','tinfoil','tokengo','tokenrouter','trustedrouter','umansai','v0','vancine','vertex','vivgrid','vultr','wafer','wallaby','watsonx','xpersona','zeldoc','zenifra','zenmux'];
-  newProviders.forEach(p => { const el = document.getElementById(p+'Key'); if(el) el.value = d[p] ? '••••••••' : ''; });
-  updateBadge('nara', d.nara);
-  updateBadge('nvidia', d.nvidia);
-  updateBadge('airforce', d.airforce);
-  updateBadge('pollinations', d.pollinations);
-  updateBadge('hf', d.hf);
-  updateBadge('groq', d.groq);
-  updateBadge('cerebras', d.cerebras);
-  updateBadge('zai', d.zai);
-  updateBadge('siliconflow', d.siliconflow);
-  updateBadge('google', d.google);
-  updateBadge('mistral', d.mistral);
-  updateBadge('cohere', d.cohere);
-  updateBadge('deepseek', d.deepseek);
-  updateBadge('openrouter', d.openrouter);
-  updateBadge('cloudflare', d.cloudflare);
-  updateBadge('scaleway', d.scaleway);
-  updateBadge('together', d.together);
-  updateBadge('fireworks', d.fireworks);
-  updateBadge('deepinfra', d.deepinfra);
-  updateBadge('novita', d.novita);
-  updateBadge('ai21', d.ai21);
-  updateBadge('upstage', d.upstage);
-  updateBadge('reka', d.reka);
-  updateBadge('nebius', d.nebius);
-  updateBadge('baseten', d.baseten);
-  updateBadge('sambanova', d.sambanova);
-  updateBadge('xai', d.xai);
-  updateBadge('perplexity', d.perplexity);
-  updateBadge('openai', d.openai);
-  updateBadge('anthropic', d.anthropic);
-  updateBadge('venice', d.venice);
-  updateBadge('minimax', d.minimax);
-  updateBadge('moonshot', d.moonshot);
-  updateBadge('stepfun', d.stepfun);
-  updateBadge('zhipu', d.zhipu);
-  updateBadge('volcengine', d.volcengine);
-  updateBadge('alibaba', d.alibaba);
-  updateBadge('baidu', d.baidu);
-  updateBadge('sensenova', d.sensenova);
-  updateBadge('xiaomi', d.xiaomi);
-  updateBadge('tencent', d.tencent);
-  updateBadge('bytedance', d.bytedance);
-  updateBadge('github', d.github);
-  updateBadge('llm7', d.llm7);
-  updateBadge('ovhcloud', d.ovhcloud);
-  updateBadge('ollama', d.ollama);
-  updateBadge('kilo', d.kilo);
-  updateBadge('opencodezen', d.opencodezen);
-  updateBadge('aionlabs', d.aionlabs);
-  updateBadge('agnes', d.agnes);
-  updateBadge('chutes', d.chutes);
-  updateBadge('glhf', d.glhf);
-  updateBadge('nscale', d.nscale);
-  updateBadge('hyperbolic', d.hyperbolic);
-  updateBadge('iflow', d.iflow);
-  updateBadge('kluster', d.kluster);
-  updateBadge('friendli', d.friendli);
-  updateBadge('lepton', d.lepton);
-  updateBadge('anyscale', d.anyscale);
-  updateBadge('puter', d.puter);
-  updateBadge('aiml', d.aiml);
-  updateBadge('nagaai', d.nagaai);
-  updateBadge('paxsenix', d.paxsenix);
-  updateBadge('aihubmix', d.aihubmix);
-  updateBadge('fastrouter', d.fastrouter);
-  updateBadge('literouter', d.literouter);
-  updateBadge('swiftrouter', d.swiftrouter);
-  updateBadge('unorouter', d.unorouter);
-  updateBadge('voidai', d.voidai);
-  updateBadge('valorgpt', d.valorgpt);
-  updateBadge('zenllm', d.zenllm);
-  updateBadge('resurge', d.resurge);
-  updateBadge('subaxis', d.subaxis);
-  updateBadge('routeway', d.routeway);
-  updateBadge('requesty', d.requesty);
-  updateBadge('aipooled', d.aipooled);
-  updateBadge('llmgateway', d.llmgateway);
-  updateBadge('studiolm', d.studiolm);
-  updateBadge('pixazo', d.pixazo);
-  updateBadge('yingsuan', d.yingsuan);
-  updateBadge('xeven', d.xeven);
-  updateBadge('ofox', d.ofox);
-  updateBadge('mnnai', d.mnnai);
-  updateBadge('wandb', d.wandb);
-  updateBadge('replicate', d.replicate);
-  updateBadge('arcee', d.arcee);
-  updateBadge('subnp', d.subnp);
-  updateBadge('aichixia', d.aichixia);
-  updateBadge('pydantic', d.pydantic);
-  const newBadges = ['opencodego','302ai','abacus','above','agentrouter','airouter','aixy','akio','alibabachina','ambient','amd','anyapi','atomicchat','auriko','azure','bailing','berget','blueclaw','bothub','charmhyper','clarifai','claudinio','clinepass','cloudferro','coralbricks','cortecs','crofai','crossmodel','crusoe','daoxe','databricks','devpass','dinference','digitalocean','ebcloud','echo','edenai','empiriolabs','evroc','freemodel','frogbot','gitlabduo','gmicloud','greenpt','helicone','hetzner','hpc','impossibl','inception','inceptron','inferflow7','inference','inferx','infomaniak','ionet','iteracompute','jalapeno','jiekou','kenari','kimifor','klok','kosmik','kuae','lilac','llama','llmtech','llmtr','lmstudio','longcat','lucidquery','lynkr','meganova','melious','mergegateway','meta','mixlayer','moark','modal','modeloracle','modelis','modelscope','morph','nrouter','nan','nanogpt','nearai','neosmith','neuralwatt','nova','openreason','opper','orcarouter','pendra','pioneer','poe','poolside','privatemode','qihang','qiniu','qvac','regolo','routingrun','runinfra','sakana','saladcloud','sapai','sarvam','scxai','snowflake','stackit','standardcompute','subconscious','submodel','synthetic','tencenttoken','tencenttokenhub','tensorx','thegrid','thinkingmachines','tinfoil','tokengo','tokenrouter','trustedrouter','umansai','v0','vancine','vertex','vivgrid','vultr','wafer','wallaby','watsonx','xpersona','zeldoc','zenifra','zenmux'];
-  newBadges.forEach(b => { updateBadge(b, d[b]); });
-}).catch(() => {});
-
-function saveKey(who) {
-  const val = document.getElementById(who + 'Key').value.trim();
-  const statusEl = document.getElementById(who + 'Status');
-  if (!val || val === '••••••••') { statusEl.textContent = 'Boş bırakılamaz'; statusEl.className = 'status-text error'; return; }
-  fetch(API + '/save-key', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ provider: who, key: val })
-  }).then(r => r.json()).then(d => {
-    if (d.ok) {
-      statusEl.textContent = '✓ Kaydedildi';
-      statusEl.className = 'status-text success';
-      document.getElementById(who + 'Key').value = '••••••••';
-      updateBadge(who, true);
-    }
-  }).catch(() => {
-    statusEl.textContent = '✗ Köprü bağlı değil';
-    statusEl.className = 'status-text error';
-  });
-}
-window.saveKey = saveKey;
 
 function addMessage(text, sender) {
   const div = document.createElement('div');
@@ -826,3 +1329,4 @@ function hideTooltip() {
 
 // Dropdown'ı başlat
 initDropdown();
+initProviderGrid();
