@@ -1,7 +1,5 @@
-// AI Asistan Yapay Şirket Köprüsü + Yönetici Katmanı
-// localhost:8788 dinler. Gelen görevi ücretsiz araç havuzuna yönlendirir (yönetici),
-// sonucu doğrular, takılırsa yeniden dener; akıl gerektiren işi "beyne devret" olarak işaretler.
-// Not: "bunu/şunu/bu" gibi göndermeler son asistan metnini (ör. hikaye) context olarak kullanır.
+// AI Asistanım - Köprü Sunucusu
+// localhost:8788 dinler.
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
@@ -12,17 +10,39 @@ const PORT = 8788;
 const OUTDIR = path.join(__dirname, 'bridge_output');
 if (!fs.existsSync(OUTDIR)) fs.mkdirSync(OUTDIR, { recursive: true });
 
-const ALLOWED_BRIDGE_ORIGINS = [
+// Config dosyası yolu
+const CONFIG_PATH = path.join(__dirname, 'config.json');
+
+// Config yükle
+function loadConfig() {
+  try {
+    if (fs.existsSync(CONFIG_PATH)) {
+      return JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8'));
+    }
+  } catch(e) { console.log('[Config] Okuma hatası:', e.message); }
+  return {};
+}
+
+// Config kaydet
+function saveConfig(cfg) {
+  try {
+    fs.writeFileSync(CONFIG_PATH, JSON.stringify(cfg, null, 2), 'utf8');
+    console.log('[Config] Kaydedildi');
+  } catch(e) { console.log('[Config] Yazma hatası:', e.message); }
+}
+
+let config = loadConfig();
+
+const ALLOWED_ORIGINS = [
   'https://ahmetks55.github.io',
   'http://localhost',
   'http://127.0.0.1'
 ];
 
-// Kötü niyetli web sayfalarının yerel köprüyü kullanmasını engeller.
 function originAllowed(origin) {
-  if (!origin) return true; // tarayıcı dışı istemciler (curl, node) origin göndermez
-  if (origin === 'null') return true; // file:// ile açılmış sayfa
-  return ALLOWED_BRIDGE_ORIGINS.some((o) => origin === o || origin.startsWith(o + ':'));
+  if (!origin) return true;
+  if (origin === 'null') return true;
+  return ALLOWED_ORIGINS.some((o) => origin === o || origin.startsWith(o + ':'));
 }
 
 function send(res, code, obj, origin) {
@@ -31,699 +51,288 @@ function send(res, code, obj, origin) {
     'Content-Type': 'application/json',
     'Access-Control-Allow-Origin': allow,
     'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, x-admin-token'
+    'Access-Control-Allow-Headers': 'Content-Type'
   });
   res.end(JSON.stringify(obj));
 }
 
 const MIME_TYPES = {
-  '.jpg': 'image/jpeg',
-  '.jpeg': 'image/jpeg',
-  '.png': 'image/png',
-  '.gif': 'image/gif',
-  '.webp': 'image/webp',
-  '.txt': 'text/plain; charset=utf-8'
+  '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png',
+  '.gif': 'image/gif', '.webp': 'image/webp', '.txt': 'text/plain; charset=utf-8'
 };
 
-// bridge_output içindeki bir dosyayı tarayıcıya servis et (görsel gösterimi + indirme)
 function serveFile(res, relPath, origin) {
   const safe = path.normalize(path.join(OUTDIR, relPath));
-  if (!safe.startsWith(path.normalize(OUTDIR)) || !safe.startsWith(OUTDIR + path.sep)) {
-    res.writeHead(403, { 'Content-Type': 'text/plain' });
-    res.end('Erişim yasak');
-    return;
+  if (!safe.startsWith(OUTDIR + path.sep)) {
+    res.writeHead(403); return res.end('Yasak');
   }
   fs.stat(safe, (e, st) => {
-    if (e || !st.isFile()) {
-      res.writeHead(404, { 'Content-Type': 'text/plain' });
-      res.end('Dosya yok');
-      return;
-    }
+    if (e || !st.isFile()) { res.writeHead(404); return res.end('Yok'); }
     const ext = path.extname(safe).toLowerCase();
-    const ct = MIME_TYPES[ext] || 'application/octet-stream';
-    const headers = { 'Content-Type': ct, 'Content-Length': st.size };
-    if (origin && originAllowed(origin)) headers['Access-Control-Allow-Origin'] = origin;
-    res.writeHead(200, headers);
+    res.writeHead(200, { 'Content-Type': MIME_TYPES[ext] || 'application/octet-stream', 'Content-Length': st.size });
     fs.createReadStream(safe).pipe(res);
   });
 }
 
-function uniq(prefix) {
-  return prefix + '_' + Date.now() + '_' + Math.floor(Math.random() * 1000);
-}
-
-// ---------------------------------------------------------------
-// NARAROUTER ENTEGRASYONU — Tüm ücretsiz modeller tek noktadan
-// ---------------------------------------------------------------
-const NARA_KEY = 'sk-nry-Sjg_ciKWNPY6IhrE47VA2VlMjSnNbkqN3J3hXfR32X4';
-const GEMINI_KEY = 'AIzaSyCtJcX9DQ4llHoLBkHTWqwuLjnWDlf4UbI';
-const NARA_CHAT_URL = 'https://router.bynara.id/v1/chat/completions';
-const NARA_IMAGE_URL = 'https://api-images.bynara.id/v1/images/generations';
-const NARA_MODELS_CHAT = [
-  'tencent-hy3-free', 'stepfun-3.7-flash', 'agnes-2.5-flash', 'laguna-s-2.1'
-];
-const NARA_MODELS_IMAGE = [
-  'agnes-image-2.0-flash', 'agnes-image-2.1-flash',
-  'grok-imagine', 'nano-banana-pro'
-];
-
-// NaraRouter beyin (chat completions) — baseUrl: https://router.bynara.id/v1
-function naraChat(task, context, cb) {
-  if (!NARA_KEY) return cb(null, null);
+// ===== NARAROUTER =====
+function naraChat(task, context, key, cb) {
+  const k = key || config.naraKey || '';
+  if (!k) return cb(new Error('NaraRouter anahtarı yok'));
   const msgs = [];
-  if (context) msgs.push({ role: 'system', content: 'Sen yardımcı bir asistansın. Kullanıcının dilinde doğal ve kısa cevap ver.' });
+  if (context) msgs.push({ role: 'system', content: context });
   msgs.push({ role: 'user', content: task });
-  const body = JSON.stringify({ model: NARA_MODELS_CHAT[0], messages: msgs, max_tokens: 1024 });
-  const url = new URL(NARA_CHAT_URL);
+  const body = JSON.stringify({ model: 'tencent-hy3-free', messages: msgs, max_tokens: 1024 });
+  const url = new URL('https://router.bynara.id/v1/chat/completions');
   const req = https.request({
-    hostname: url.hostname,
-    port: url.port || 443,
-    path: url.pathname,
-    method: 'POST',
-    headers: { 'Authorization': 'Bearer ' + NARA_KEY, 'Content-Type': 'application/json' },
+    hostname: url.hostname, port: 443, path: url.pathname, method: 'POST',
+    headers: { 'Authorization': 'Bearer ' + k, 'Content-Type': 'application/json' },
     timeout: 30000
   }, (res) => {
     let data = '';
     res.on('data', (c) => { data += c; });
     res.on('end', () => {
-      if (res.statusCode >= 400) {
-        console.log('[NaraRouter beyin] hata ' + res.statusCode + ': ' + data.slice(0, 200));
-        return cb(null, null);
-      }
+      if (res.statusCode >= 400) return cb(new Error('Nara HTTP ' + res.statusCode));
       try {
         const j = JSON.parse(data);
         const text = (j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content) || '';
         cb(null, text.trim() || null);
-      } catch (e) { cb(null, null); }
+      } catch(e) { cb(null, null); }
     });
   });
-  req.on('error', (e) => { console.log('[NaraRouter beyin] hata:', e.message); cb(null, null); });
+  req.on('error', (e) => cb(e));
   req.on('timeout', () => req.destroy(new Error('timeout')));
   req.write(body);
   req.end();
 }
 
-// Gemini beyin (chat completions) — baseUrl: https://generativelanguage.googleapis.com/v1beta
-function geminiChat(task, context, cb) {
-  if (!GEMINI_KEY) return cb(new Error('Gemini anahtarı yapılandırılmamış'));
-  const system = 'Sen Türkçe konuşan yardımsever ve detaylı bir AI asistanısın. Cevapların Türkçe, açıklayıcı ve kapsamlı olsun.';
-  const historyParts = [];
-  historyParts.push('Kullanıcı: ' + task);
-  const inputText = historyParts.join('\n');
-
-  const body = JSON.stringify({
-    model: 'gemini-3.5-flash',
-    input: inputText,
-    system_instruction: system
-  });
-
+// ===== NVIDIA NIM =====
+function nvidiaChat(task, context, key, cb) {
+  const k = key || config.nvidiaKey || '';
+  if (!k) return cb(new Error('NVIDIA anahtarı yok'));
+  const msgs = [];
+  if (context) msgs.push({ role: 'system', content: context });
+  msgs.push({ role: 'user', content: task });
+  const body = JSON.stringify({ model: 'meta/llama-3.3-70b-instruct', messages: msgs, max_tokens: 1024, stream: false });
   const req = https.request({
-    hostname: 'generativelanguage.googleapis.com',
+    hostname: 'integrate.api.nvidia.com',
     port: 443,
-    path: `/v1beta/models/gemini-3.5-flash:generateContent?key=${GEMINI_KEY}`,
+    path: '/v1/chat/completions',
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json'
-    },
+    headers: { 'Authorization': 'Bearer ' + k, 'Content-Type': 'application/json' },
     timeout: 30000
   }, (res) => {
     let data = '';
     res.on('data', (c) => { data += c; });
     res.on('end', () => {
-      if (res.statusCode >= 400) {
-        console.log('[Gemini beyin] hata ' + res.statusCode + ': ' + data.slice(0, 200));
-        return cb(new Error('Gemini HTTP ' + res.statusCode));
-      }
+      if (res.statusCode >= 400) return cb(new Error('NVIDIA HTTP ' + res.statusCode));
       try {
         const j = JSON.parse(data);
-        const text = (j.output_text || (j.candidates && j.candidates[0] && j.candidates[0].content && j.candidates[0].content.parts && j.candidates[0].content.parts[0] && j.candidates[0].content.parts[0].text) || '').trim();
-        cb(null, text || null);
-      } catch (e) {
-        console.log('[Gemini beyin] parse hatası:', e.message);
-        cb(new Error('Gemini yanıt ayrıştırılamadı'));
-      }
+        const text = (j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content) || '';
+        cb(null, text.trim() || null);
+      } catch(e) { cb(null, null); }
     });
   });
-  req.on('error', (e) => { console.log('[Gemini beyin] hata:', e.message); cb(e); });
+  req.on('error', (e) => cb(e));
   req.on('timeout', () => req.destroy(new Error('timeout')));
   req.write(body);
   req.end();
 }
 
-// NaraRouter görsel üretim — ücretsiz modeller henüz sınırlı, Pollinations tercih edilir
-// Ücretsiz görsel modelleri eklendiğinde buraya eklenecek
-function naraImage(prompt, cb) {
-  // Şu an ücretsiz görsel modeli yok (agnes ücretli), Pollinations'e düş
-  return cb(new Error('NaraRouter ücretsiz görsel modeli yok'));
-}
-
-function fileUrl(fname) {
-  return 'http://localhost:' + PORT + '/goruntu/' + encodeURIComponent(fname);
-}
-
-// ---------------------------------------------------------------
-// YÖNETİCİ KANCASI (opencode admin) — isteğe bağlı ayrı CLI yöneticisi
-// Görevi köprünün/anahların çözemediği işlerde bu komuta devreder.
-// Yapılandırma (repo yanında bridge_admin.json, gitignore'lu) ya da OPENCODE_ADMIN ortam değişkeni:
-//   { "admin": ["opencode","run","--format","json"], "timeoutMs": 120000, "clientToken": "" }
-//   - admin: çalıştırılacak CLI ve sabit argümanları; görev metni son argüman olarak eklenir
-//   - clientToken: doluysa /run isteği "x-admin-token" başlığında aynı değeri taşımalı
-//   - çıktı JSON {results:[...]} beklenir; değilse ham metin "admin" sonucu olarak döner
-// Ayarlı değilse önceki davranış aynen korunur (beyne devret).
-// ---------------------------------------------------------------
-function loadAdminConfig() {
-  const cfg = { admin: null, timeoutMs: 120000, clientToken: '' };
-  const cfgFile = path.join(__dirname, 'bridge_admin.json');
-  try {
-    if (fs.existsSync(cfgFile)) {
-      const raw = fs.readFileSync(cfgFile, 'utf8').replace(/^\uFEFF/, '');
-      const parsed = JSON.parse(raw);
-      if (parsed.admin) cfg.admin = parsed.admin;
-      if (parsed.timeoutMs) cfg.timeoutMs = parsed.timeoutMs;
-      if (parsed.clientToken) cfg.clientToken = String(parsed.clientToken);
-    }
-  } catch (e) {
-    console.log('Admin yapılandırması okunamadı:', e.message);
-  }
-  if (process.env.OPENCODE_ADMIN) cfg.admin = process.env.OPENCODE_ADMIN;
-  if (typeof cfg.admin === 'string' && cfg.admin.trim()) cfg.admin = cfg.admin.split(/\s+/).filter(Boolean);
-  if (!Array.isArray(cfg.admin)) cfg.admin = null;
-  return cfg;
-}
-const ADMIN = loadAdminConfig();
-
-// Yönetici CLI'yı çalıştır; başarı + boş olmayan çıktı yoksa null (beyne düşer).
-function runAdmin(task, cb) {
-  if (!ADMIN.admin) return cb(null, null);
-  const args = ADMIN.admin.concat(String(task));
-  // 'node' PATH'te olmayabilir; kesin yol kullan
-  const cmd = (args[0] === 'node' || args[0] === 'node.exe') ? process.execPath : args[0];
-  execFile(cmd, args.slice(1), {
-    timeout: ADMIN.timeoutMs,
-    encoding: 'utf8',
-    maxBuffer: 2 * 1024 * 1024
-  }, (err, stdout) => {
-    if (err) { console.log('Yönetici kancası hatası:', err.message); }
-    if (err || !stdout || !stdout.trim()) return cb(null, null);
-    let parsed = null;
-    try { parsed = JSON.parse(stdout); } catch (e) { parsed = null; }
-    cb(null, parsed || { text: stdout.trim() });
-  });
-}
-
-// ---------------------------------------------------------------
-// ARAÇ ÜRETİCİLERİ + DOĞRULAMA (takılırsa yeniden dene)
-// ---------------------------------------------------------------
-
-// Görsel üretimi (Pollinations) — doğrulama: dosya > 1KB olmalı, boşsa 1 kez daha dener.
-// Prompt: komut/dolgu kelimeler TAM KELİME olarak temizlenir (harf değil), betimleme korunur.
-const IMAGE_STOP = /^(?:lütfen|lutfen|bana|bir|resm\w*|görsel\w*|gorsel\w*|fotoğraf\w*|fotograf\w*|çiz(?!g)\w*|yap\w*|oluştur\w*|olustur\w*|göster\w*|goster\w*|üret\w*|uret\w*|sağla\w*|sagla\w*|ver\w*|teşekkürler|tesekkurler|istersen|rica\s+\w*)$/iu;
-function cleanImagePrompt(raw) {
-  const s = String(raw || '').trim().replace(/[.,;:!?'"”’()[\]{}]+$/g, '');
-  const kept = s.split(/\s+/).filter((w) => w && !IMAGE_STOP.test(w));
-  const out = kept.join(' ').trim();
-  return out || 'güzel bir manzara sahnesi, yüksek detay, canlı renkler';
-}
-function promptHash(p) {
-  let h = 0;
-  for (const c of String(p)) h = (h * 31 + c.codePointAt(0)) | 0;
-  return (Math.abs(h) % 2147483647) + 1;
-}
-// Görsel üretimi — NaraRouter primero, Pollinations fallback
-// Deterministik: aynı prompt aynı seed → aynı görsel.
-function imageFromPrompt(prompt, cb, attempt) {
-  const clean = cleanImagePrompt(prompt);
-  const seed = promptHash(clean);
-  console.log('[görsel] istenen:', JSON.stringify(String(prompt)), '-> flux prompt:', JSON.stringify(clean), 'seed:', seed);
-  attempt = attempt || 0;
-  // Önce NaraRouter dene
-  if (NARA_KEY) {
-    return naraImage(prompt, (nErr, file) => {
-      if (!nErr && file) return cb(null, file);
-      console.log('[görsel] NaraRouter başarısız, Pollinations\'e düşülüyor:', nErr ? nErr.message : 'dosya yok');
-      pollinationsImage(clean, seed, cb, attempt);
-    });
-  }
-  pollinationsImage(clean, seed, cb, attempt);
-}
-function pollinationsImage(clean, seed, cb, attempt) {
-  attempt = attempt || 0;
-  const enc = encodeURIComponent(clean.slice(0, 300));
-  const urls = [
-    'https://gen.pollinations.ai/image/' + enc + '?width=768&height=768&nologo=true&model=flux&seed=' + seed,
-    'https://image.pollinations.ai/prompt/' + enc + '?width=768&height=768&nologo=true&model=flux&seed=' + seed
-  ];
-  const file = path.join(OUTDIR, uniq('gorsel') + '.jpg');
-  const tryUrl = (idx) => {
-    const req = https.get(urls[idx], { timeout: 25000 }, (r) => {
-      if (r.statusCode >= 400) {
-        req.destroy();
-        if (idx === 0) return tryUrl(1);
-        if (attempt < 1) return setTimeout(() => pollinationsImage(clean, seed, cb, attempt + 1), 1500);
-        return cb(new Error('Görsel servisi ' + r.statusCode));
-      }
-      const f = fs.createWriteStream(file);
-      r.pipe(f);
-      f.on('finish', () => {
-        let st;
-        try { st = fs.statSync(file); } catch (e) { st = { size: 0 }; }
-        if (st.size < 1024) {
-          try { fs.unlinkSync(file); } catch (e) {}
-          if (attempt < 1) return setTimeout(() => pollinationsImage(clean, seed, cb, attempt + 1), 1500);
-          return cb(new Error('Görsel boş döndü (doğrulama başarısız)'));
-        }
-        cb(null, file);
-      });
-      f.on('error', (e) => cb(e));
-    });
-    req.on('timeout', () => req.destroy(new Error('Görsel üretimi zaman aşımı')));
-    req.on('error', (e) => {
-      if (idx === 0) return tryUrl(1);
-      if (attempt < 1) return setTimeout(() => pollinationsImage(clean, seed, cb, attempt + 1), 1500);
-      cb(e);
-    });
-  };
-  tryUrl(0);
-}
-
-// Güvenli aritmetik çözücü (eval yok) — recursive descent
-function safeEvalArithmetic(expr) {
-  try {
-    const s = expr.replace(/\s+/g, '');
-    let i = 0;
-    const peek = () => s[i];
-    const number = () => {
-      let n = '';
-      while (i < s.length && /[0-9.]/.test(s[i])) { n += s[i]; i++; }
-      return n ? parseFloat(n) : NaN;
-    };
-    function factor() {
-      if (peek() === '(') {
-        i++;
-        const v = expression();
-        if (peek() === ')') i++;
-        return v;
-      }
-      const n = number();
-      if (isNaN(n)) throw new Error('geçersiz');
-      return n;
-    }
-    function term() {
-      let v = factor();
-      while (i < s.length && (s[i] === '*' || s[i] === '/')) {
-        const op = s[i++];
-        const r = factor();
-        v = op === '*' ? v * r : v / r;
-      }
-      return v;
-    }
-    function expression() {
-      let v = term();
-      while (i < s.length && (s[i] === '+' || s[i] === '-')) {
-        const op = s[i++];
-        const r = term();
-        v = op === '+' ? v + r : v - r;
-      }
-      return v;
-    }
-    const v = expression();
-    if (i !== s.length) throw new Error('geçersiz');
-    return Number.isFinite(v) ? v : null;
-  } catch (e) {
-    return null;
-  }
-}
-
-const trMap = (s) => s
-  .replace(/(?<![\p{L}\p{N}_])(kere|çarpı|carp|ile|çarpılmış|carpilmis|katı|kati)(?![\p{L}\p{N}_])/giu, '*')
-  .replace(/(?<![\p{L}\p{N}_])(artı|arti|ekle|topla|toplam)(?![\p{L}\p{N}_])/giu, '+')
-  .replace(/(?<![\p{L}\p{N}_])(eksi|çıkar|cikar)(?![\p{L}\p{N}_])/giu, '-')
-  .replace(/(?<![\p{L}\p{N}_])(bölü|bolu|böl|bol)(?![\p{L}\p{N}_])/giu, '/');
-
-// Web araması (sunucuda — CORS derdi yok): DuckDuckGo Özet API + HTML yedeği
-function scrapeDdg(query, cb) {
-  const url = 'https://html.duckduckgo.com/html/?q=' + encodeURIComponent(query);
-  https.get(url, { headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' }, timeout: 25000 }, (r) => {
-    let d = '';
-    r.on('data', (c) => (d += c));
-    r.on('end', () => {
-      const out = [];
-      const re = /<a[^>]*class="result__a"[^>]*href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/g;
-      let m;
-      while ((m = re.exec(d)) !== null && out.length < 3) {
-        let link = m[1];
-        const redir = link.match(/uddg=([^&]+)/);
-        if (redir) { try { link = decodeURIComponent(redir[1]); } catch (e) {} }
-        const title = m[2].replace(/<[^>]+>/g, '').replace(/&quot;/g, '"').replace(/&amp;/g, '&').trim();
-        if (title) out.push('• ' + title + '\n  ' + link);
-      }
-      cb(out.length ? out.join('\n') : null);
-    });
-  }).on('timeout', function () { this.destroy(new Error('Arama zaman aşımı')); })
-    .on('error', () => cb(null));
-}
-
-function webSearch(query, cb) {
-  const url = 'https://api.duckduckgo.com/?q=' + encodeURIComponent(query) + '&format=json&no_html=1&skip_disambig=1';
-  https.get(url, { timeout: 25000 }, (r) => {
-    let d = '';
-    r.on('data', (c) => (d += c));
-    r.on('end', () => {
+// ===== AIRFORCE (Mimo) =====
+function airforceChat(task, context, key, cb) {
+  const k = key || config.airforceKey || '';
+  if (!k) return cb(new Error('Airforce anahtarı yok'));
+  const msgs = [];
+  if (context) msgs.push({ role: 'system', content: context });
+  msgs.push({ role: 'user', content: task });
+  const body = JSON.stringify({ model: 'mimo-v2.5-pro', messages: msgs, max_tokens: 1024, stream: false });
+  const req = https.request({
+    hostname: 'api.air.force',
+    port: 443,
+    path: '/v1/chat/completions',
+    method: 'POST',
+    headers: { 'Authorization': 'Bearer ' + k, 'Content-Type': 'application/json' },
+    timeout: 30000
+  }, (res) => {
+    let data = '';
+    res.on('data', (c) => { data += c; });
+    res.on('end', () => {
+      if (res.statusCode >= 400) return cb(new Error('Airforce HTTP ' + res.statusCode));
       try {
-        const data = JSON.parse(d);
-        if (data.AbstractText) {
-          return cb(null, '📚 ' + data.AbstractText + (data.AbstractURL ? '\n🔗 ' + data.AbstractURL : ''));
-        }
-        if (data.RelatedTopics && data.RelatedTopics.length) {
-          const texts = data.RelatedTopics.map((t) => t.Text).filter(Boolean).slice(0, 3);
-          if (texts.length) return cb(null, 'İlgili sonuçlar:\n• ' + texts.join('\n• '));
-        }
-        // Özet API'de sonuç yoksa HTML aramasıyla dene
-        return scrapeDdg(query, (html) => cb(null, html || 'Bu konuda web sonucu bulunamadı.'));
-      } catch (e) {
-        return scrapeDdg(query, (html) => cb(null, html || 'Web araması şu an çalışmadı.'));
+        const j = JSON.parse(data);
+        const text = (j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content) || '';
+        cb(null, text.trim() || null);
+      } catch(e) { cb(null, null); }
+    });
+  });
+  req.on('error', (e) => cb(e));
+  req.on('timeout', () => req.destroy(new Error('timeout')));
+  req.write(body);
+  req.end();
+}
+
+// ===== GEMINI =====
+function geminiChat(task, context, cb) {
+  const k = config.geminiKey || '';
+  if (!k) return cb(new Error('Gemini anahtarı yok'));
+  const body = JSON.stringify({
+    contents: [{ parts: [{ text: (context ? context + '\n\n' : '') + task }] }],
+    systemInstruction: { parts: [{ text: 'Sen Türkçe konuşan yardımsever ve detaylı bir AI asistanısın.' }] }
+  });
+  const req = https.request({
+    hostname: 'generativelanguage.googleapis.com', port: 443,
+    path: '/v1beta/models/gemini-2.0-flash:generateContent?key=' + k,
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, timeout: 30000
+  }, (res) => {
+    let data = '';
+    res.on('data', (c) => { data += c; });
+    res.on('end', () => {
+      if (res.statusCode >= 400) return cb(new Error('Gemini HTTP ' + res.statusCode));
+      try {
+        const j = JSON.parse(data);
+        const text = (j.candidates && j.candidates[0] && j.candidates[0].content && j.candidates[0].content.parts && j.candidates[0].content.parts[0] && j.candidates[0].content.parts[0].text) || '';
+        cb(null, text.trim() || null);
+      } catch(e) { cb(null, null); }
+    });
+  });
+  req.on('error', (e) => cb(e));
+  req.on('timeout', () => req.destroy(new Error('timeout')));
+  req.write(body);
+  req.end();
+}
+
+// ===== BEYNİ ÇALIŞTIR =====
+function runBrain(brain, task, context, keys, cb) {
+  const ctx = context || 'Sen Türkçe konuşan yardımsever bir asistansın. Kısa ve net cevap ver.';
+
+  if (brain === 'nvidia') {
+    nvidiaChat(task, ctx, keys.nvidiaKey, (err, text) => {
+      if (!err && text) return cb(null, { status: 'done', plan: ['nvidia'], results: [{ type: 'brain', text }] });
+      cb(err || new Error('NVIDIA yanıt vermedi'));
+    });
+  } else if (brain === 'airforce') {
+    airforceChat(task, ctx, keys.airforceKey, (err, text) => {
+      if (!err && text) return cb(null, { status: 'done', plan: ['airforce'], results: [{ type: 'brain', text }] });
+      cb(err || new Error('Airforce yanıt vermedi'));
+    });
+  } else {
+    // Varsayılan: NaraRouter, başarısızsa fallback
+    naraChat(task, ctx, keys.naraKey, (err, text) => {
+      if (!err && text) return cb(null, { status: 'done', plan: ['nara'], results: [{ type: 'brain', text }] });
+      // Fallback: NVIDIA varsa onu dene
+      if (keys.nvidiaKey) {
+        nvidiaChat(task, ctx, keys.nvidiaKey, (err2, text2) => {
+          if (!err2 && text2) return cb(null, { status: 'done', plan: ['nvidia'], results: [{ type: 'brain', text: text2 }] });
+          cb(new Error('Tüm beyinler yanıt vermedi'));
+        });
+      } else {
+        cb(new Error('NaraRouter ve fallback beyinler yanıt vermedi'));
       }
     });
-  }).on('timeout', function () { this.destroy(new Error('Arama zaman aşımı')); })
-    .on('error', (e) => cb(e));
+  }
 }
 
-// ---------------------------------------------------------------
-// YÖNETİCİ: görevi anla, ücretsiz araca yönlendir
-// ---------------------------------------------------------------
-
-// "bunu/şunu/bu/şu/onu" gibi göndermeler son asistan metnini (ör. hikaye) kullanır.
-function resolveSubject(task, context) {
-  const ref = /(bunu|şunu|sunu|bu\b|şu\b|su\b|onu|bunun|şunun)\b/i.test(task);
-  return ref && context ? String(context).trim() : task;
-}
-
-const stripPrompt = (s) => s
-  .replace(/lütfen|lutfen|bana|bir|görsel|gorsel|resim|fotoğraf|fotograf|çiz\/?|çizim|yap|oluştur|olustur|göster|goster|ver|üret|uret|sağla|sagla|teşekkürler|tesekkurler|teşekkurler|li|li\s+olsun/gi, '')
-  .trim();
-
-const stripSpeak = (s) => s
-  .replace(/(lütfen|lutfen|bunu|şunu|sunu|şu|su|onu|metni|sesli|seslendir|oku|konuş|konus|dinle|yap|olarak|artık|artik|ve|ayrıca)/gi, '')
-  .trim();
-
-const stripSearch = (s) => s
-  .replace(/(lütfen|lutfen|internette|web'de|webde|internet|google'da|ara\b|şunu|sunu|şu|su|güncel|guncel|bilgi|yap|hakkında|hakkinda|ver)/gi, '')
-  .trim();
-
-// Uzun metni sahnelere böl (önce satır, yoksa cümle bazında)
-function splitScenes(subject, max) {
-  max = max || 4;
-  const raw = String(subject || '').trim();
-  const parts = raw.split(/\n+/).map((s) => s.trim()).filter(Boolean);
-  let sentences = parts.length > 1 ? parts : raw.split(/(?<=[.!?])\s+/).map((s) => s.trim()).filter(Boolean);
-  if (sentences.length === 1) {
-    // Tek cümle: virgül / "ve" sınırlarından böl (tek parça kalmasın)
-    const clauses = sentences[0].split(/\s*,\s*|\s+ve\s+|\s+veya\s+/).map((s) => s.trim()).filter(Boolean);
-    if (clauses.length > 1) sentences = clauses;
-  }
-  if (sentences.length === 1) {
-    // Hâlâ tek parça: başlangıç-gelişme-özet mini anlatım kur
-    const main = sentences[0];
-    sentences = [
-      'Giriş: ' + main,
-      'Şimdi bu konunun öne çıkan noktalarını birlikte inceleyelim.',
-      'Özet: ' + main.slice(0, 100)
-    ];
-  }
-  sentences = sentences.slice(0, max).map((s) => (s.length > 140 ? s.slice(0, 137) + '...' : s));
-  const titles = ['Giriş', 'Ana Konu', 'Gelişme', 'Sonuç'];
-  return sentences.map((s, idx) => ({ title: titles[idx] || 'Bölüm ' + (idx + 1), text: s }));
-}
-
-// Yapılandırılmış hikaye/senaryo metninden sahneleri çıkarır.
-// "N. Senaryo: Başlık" başlıkları raflar; her blokta "Anlatım:" metnini,
-// yoksa "Olay Özeti:" satırını, o da yoksa blok metnini sahne anlatımı yapar.
-// Başlık yapısı yoksa splitScenes'e düşer.
-function parseStoryScenes(subject, max) {
-  max = max || 6;
-  const raw = String(subject || '').replace(/\r\n/g, '\n');
-  const headerRe = /^\s*(?:#{1,6}\s*)?(\d+[.)]?\s*)?\s*(?:senaryo|scenario|sahne|bölüm|bolum)\s*[\d.]*\s*[:.\-–]?\s+(.*)$/i;
-  const labelRe = /^\s*(?:[*>\s]*)?(mekan|karakterler?|olay\s+özeti?|anlatım|anlatim|olay)\s*:\s*(.*)$/i;
-  const blocks = [];
-  let current = null;
-  let sawHeader = false;
-  for (const ln of raw.split('\n')) {
-    const line = ln.trim();
-    if (!line || line === '---' || /^#{1,6}\s*$/.test(line)) continue;
-    const hm = line.match(headerRe);
-    if (hm) {
-      sawHeader = true;
-      if (current) blocks.push(current);
-      current = { title: (hm[2] || 'Sahne ' + (blocks.length + 1)).replace(/[*>`"“”]+/g, '').trim() || ('Sahne ' + (blocks.length + 1)), body: [] };
-      continue;
-    }
-    if (current) current.body.push(line);
-  }
-  if (current) blocks.push(current);
-
-  if (!sawHeader || !blocks.length) return splitScenes(subject, max);
-
-  const scenes = [];
-  for (const b of blocks) {
-    const sections = Object.create(null);
-    let key = null;
-    for (const line of b.body) {
-      const lm = line.match(labelRe);
-      if (lm) {
-        key = lm[1].toLowerCase().replace(/\s+/g, '');
-        if (!sections[key]) sections[key] = [];
-        if (lm[2]) sections[key].push(lm[2]);
-        continue;
-      }
-      if (key && sections[key]) sections[key].push(line.replace(/^[*>\s]+/, '').replace(/["“”«»]+/g, '').trim());
-    }
-    let text = '';
-    const anlatim = sections['anlatım'] || sections['anlatim'];
-    if (anlatim && anlatim.length) {
-      text = anlatim.join(' ').replace(/^["“”]+/, '').replace(/["“”]+$/, '').trim();
-    } else {
-      const ozet = sections['olayözet'] || sections['olayözeti'] || sections['olay'];
-      if (ozet && ozet.length) text = ozet.join(' ').trim();
-    }
-    if (!text) text = b.body.join(' ').replace(/[*#>"“”]/g, '').trim().slice(0, 200);
-    if (text) scenes.push({ title: b.title, text });
-  }
-  if (scenes.length < 2) return splitScenes(subject, max);
-  return scenes.slice(0, max);
-}
-
-// Sahne görseli için kısa, betimleyici prompt
-function scenesPrompt(sc) {
-  return (sc.title + ': ' + sc.text).replace(/\s+/g, ' ').trim().slice(0, 150) +
-    '. Çocuk kitabı illüstrasyonu, yumuşak ışık, sevimli karakterler';
-}
-
-// Yönetici kararı: görevi ücretsiz araç planına çevirir.
-// Kelime sınırları Unicode sınırlı (Türkçe ı/ş/ç için \b güvenilmezdir).
-function makePlan(task, context) {
-  const t = task.toLowerCase();
-  const subject = resolveSubject(task, context);
-  const plan = [];
-  const B = '(?<![\\p{L}\\p{N}_])'; // önceki karakter harf/rakam değilse kelime başı
-
-  // 1) Video/slayt — metni sahnelere böler, her sahneye arkaplan görseli üretir.
-  if (new RegExp(B + '(video|slayt|sunum)', 'iu').test(t)) {
-    plan.push({ type: 'scenes', subject });
-    return plan;
-  }
-  // 2) Görsel — Türkçe çekim eklerine dayanıklı kök eşleşmesi (resmi/resmin/resimler…)
-  if (/(resm\w*|resim\w*|görsel\w*|gorsel\w*|foto\w*|karikat(ü|u)r\w*|çiz\w*|boya\w*|logo\w*|manzara\w*|poster\w*|afiş\w*|afis\w*|ill(ü|u)strasyon)/iu.test(t)) {
-    // Prompt: kelimeleri kesme; ham görev metnini olduğu gibi modele ver (flux doğal dili çözer).
-    plan.push({ type: 'image', prompt: String(subject === task ? task : subject).trim() });
-  }
-  // 3) Sesli/seslendirme — kök eşleşmesi (okumak/okuyayım/seslendir/konuşalım…)
-  if (/(seslendir|sesli|okum|okur|okuy|okut|oku(?!l)|konuş\w*|konus\w*|dinle|tts)/iu.test(t)) {
-    plan.push({ type: 'speak', text: subject === task ? stripSpeak(task) : subject });
-  }
-  // 4) Aritmetik / kod
-  if (/(kaç\s+eder|kaçtır|kactir|kaç\s+yapar|kaç\s+ediyor|kaç\s+kalır|kac\s+kalir|hesapla|hesaplayıver|hesaplayiver)/iu.test(t)) {
-    plan.push({ type: 'arithmetic', code: task });
-  } else if (/(kod\s+çalıştır|kod\s+calistir|run\s+code|bir\s+kod|kod\s+yaz|kodu\s+çalıştır|kodu\s+calistir)/iu.test(t)) {
-    plan.push({ type: 'code', code: task });
-  }
-  // 5) Web araması (net ifadelerle)
-  if (/(internette\s+ara|web'de\s+ara|webde\s+ara|internet\s+ara|güncel\s+bilgi|guncel\s+bilgi|hakkında\s+ara|hakkinda\s+ara|google'da\s+ara|google'da\s+ara)/iu.test(t)) {
-    plan.push({ type: 'web', query: stripSearch(task) });
-  }
-  return plan;
-}
-
-// Planı sırayla çalıştırır; her adım doğrulanır.
-function runPlan(plan, done) {
-  const results = [];
-  let i = 0;
-  function next() {
-    if (i >= plan.length) return done(results);
-    const step = plan[i];
-    i++;
-    if (step.type === 'image') {
-      imageFromPrompt(step.prompt, (err, file) => {
-        const fname = err ? null : path.basename(file);
-        results.push(err
-          ? { type: 'image', error: err.message }
-          : { type: 'image', url: fileUrl(fname), file: fname });
-        next();
-      });
-    } else if (step.type === 'scenes') {
-      const scenes = parseStoryScenes(step.subject, 6);
-      let si = 0;
-      (function nextScene() {
-        if (si >= scenes.length) {
-          results.push({ type: 'scenes', scenes, note: scenes.length + ' sahnelik senaryo hazırlandı (sahne görselleri denendi, doğrulananlar kullanıldı)' });
-          return next();
-        }
-        const sc = scenes[si];
-        si++;
-        imageFromPrompt(scenesPrompt(sc), (err, file) => {
-          if (!err) sc.image = fileUrl(path.basename(file));
-          nextScene();
-        });
-      })();
-    } else if (step.type === 'arithmetic') {
-      const cleaned = trMap(step.code).replace(/[^0-9+\-*/().\s]/g, ' ').trim().replace(/\s+/g, ' ');
-      const parsed = /^[\d+\-*/().\s]+$/.test(cleaned) ? safeEvalArithmetic(cleaned) : null;
-      results.push({ type: 'result', text: parsed !== null ? String(parsed) : 'Bu hesaplamayı güvenli şekilde çözemedim.' });
-      next();
-    } else if (step.type === 'code') {
-      const m = step.code.match(/```(?:js|javascript)?\s*\n?([\s\S]*?)\n?```/);
-      results.push({ type: 'run_code', code: m ? m[1].trim() : step.code, note: 'Kod tarayıcıda güvenli sandbox ile çalıştırılır' });
-      next();
-    } else if (step.type === 'speak') {
-      results.push({ type: 'speak', text: step.text, note: 'Metin tarayıcıda Türkçe seslendirilir' });
-      next();
-    } else if (step.type === 'web') {
-      webSearch(step.query, (err, text) => {
-        results.push(err ? { type: 'search', error: err.message } : { type: 'search', text });
-        next();
-      });
-    } else {
-      next();
-    }
-  }
-  next();
-}
-
+// ===== HTTP SERVER =====
 const server = http.createServer((req, res) => {
   const origin = req.headers.origin;
   if (origin && !originAllowed(origin)) {
-    res.writeHead(403, { 'Content-Type': 'application/json' });
-    return res.end(JSON.stringify({ error: 'İzin verilmeyen kaynak' }));
+    res.writeHead(403); return res.end(JSON.stringify({ error: 'İzin yok' }));
   }
   if (req.method === 'OPTIONS') return send(res, 204, {}, origin);
-  if (req.method === 'GET' && req.url === '/health') return send(res, 200, { ok: true, tool: 'yönetici-köprü' }, origin);
-  if (req.method === 'GET' && req.url === '/models') return send(res, 200, {
-    tools: ['image', 'scenes', 'speak', 'run_code', 'result', 'search'],
-    admin: !!ADMIN.admin,
-    nara: { key: !!NARA_KEY, chat: NARA_MODELS_CHAT, image: NARA_MODELS_IMAGE },
-    gemini: { key: !!GEMINI_KEY, model: GEMINI_MODEL }
-  }, origin);
 
-  // Gemini beyin proxy — POST /gemini { task, context }
-  if (req.method === 'POST' && req.url === '/gemini') {
+  // Health
+  if (req.method === 'GET' && req.url === '/health') {
+    return send(res, 200, { ok: true, tool: 'köprü' }, origin);
+  }
+
+  // Config durumu
+  if (req.method === 'GET' && req.url === '/config') {
+    return send(res, 200, {
+      nvidia: { hasKey: !!config.nvidiaKey },
+      airforce: { hasKey: !!config.airforceKey },
+      nara: { hasKey: !!config.naraKey },
+      gemini: { hasKey: !!config.geminiKey }
+    }, origin);
+  }
+
+  // Key kaydet
+  if (req.method === 'POST' && req.url === '/save-key') {
     let body = '';
     req.on('data', (c) => { body += c; if (Buffer.byteLength(body, 'utf8') > 1048576) body = ''; });
     req.on('end', () => {
-      let task = '', context = '';
-      try { const p = JSON.parse(body); task = p.task || ''; context = p.context || ''; } catch (e) { task = body; }
-      if (!task) return send(res, 400, { error: 'Görev boş' }, origin);
-      if (!GEMINI_KEY) return send(res, 200, { status: 'needs_brain', reason: 'Gemini anahtarı yok' }, origin);
-      geminiChat(task, context, (err, text) => {
-        if (err || !text) return send(res, 200, { status: 'needs_brain', reason: 'Gemini yanıt vermedi: ' + (err || 'bilinmeyen') }, origin);
-        send(res, 200, { status: 'done', plan: ['gemini'], results: [{ type: 'brain', text }] }, origin);
-      });
+      try {
+        const p = JSON.parse(body);
+        if (p.provider && p.key) {
+          config[p.provider + 'Key'] = p.key;
+          saveConfig(config);
+          return send(res, 200, { ok: true, message: p.provider + ' anahtarı kaydedildi' }, origin);
+        }
+      } catch(e) {}
+      send(res, 400, { error: 'Geçersiz veri' }, origin);
     });
     return;
   }
 
-  // NaraRouter beyin — POST /brain { task, context }
+  // Brain (ana sohbet endpoint'i)
   if (req.method === 'POST' && req.url === '/brain') {
     let body = '';
     req.on('data', (c) => { body += c; if (Buffer.byteLength(body, 'utf8') > 1048576) body = ''; });
     req.on('end', () => {
-      let task = '', context = '';
-      try { const p = JSON.parse(body); task = p.task || ''; context = p.context || ''; } catch (e) { task = body; }
-      if (!task) return send(res, 400, { error: 'Görev boş' }, origin);
-      naraChat(task, context, (err, text) => {
-        if (!err && text) return send(res, 200, { status: 'done', plan: ['nara'], results: [{ type: 'brain', text }] }, origin);
-        // NaraRouter başarısızsa sunucu tarafındaki Gemini'ye düş
-        geminiChat(task, context, (gErr, geminiText) => {
-          if (gErr || !geminiText) return send(res, 200, { status: 'needs_brain', reason: 'NaraRouter ve Gemini yanıt vermedi' }, origin);
-          send(res, 200, { status: 'done', plan: ['gemini'], results: [{ type: 'brain', text: geminiText }] }, origin);
-        });
-      });
-    });
-    return;
-  }
-
-  // Görsel/metin dosyasını tarayıcıya servis et: /goruntu/gorsel_123.jpg
-  if (req.method === 'GET' && req.url.startsWith('/goruntu/')) {
-    return serveFile(res, decodeURIComponent(req.url.slice('/goruntu/'.length)), origin);
-  }
-
-  if (req.method === 'POST' && req.url === '/run') {
-    let body = '';
-    let tooBig = false;
-    req.on('data', (c) => {
-      body += c;
-      if (Buffer.byteLength(body, 'utf8') > 1048576) tooBig = true;
-    });
-    req.on('end', () => {
-      if (tooBig) return send(res, 413, { error: 'Görev çok büyük' }, origin);
-      let task = '';
-      let context = '';
+      let task = '', context = '', brain = 'nara';
+      let keys = {};
       try {
         const p = JSON.parse(body);
         task = p.task || '';
         context = p.context || '';
-      } catch (e) {
-        task = body;
-      }
+        brain = p.brain || 'nara';
+        keys = { nvidiaKey: p.nvidiaKey || config.nvidiaKey || '', airforceKey: p.airforceKey || config.airforceKey || '', naraKey: p.naraKey || config.naraKey || '' };
+      } catch(e) { task = body; }
       if (!task) return send(res, 400, { error: 'Görev boş' }, origin);
-      const plan = makePlan(task, context);
-      if (!plan.length) {
-        const needs = {
-          task,
-          status: 'needs_brain',
-          plan: [],
-          results: [],
-          reason: 'Yönetici bu görevi ücretsiz araçlara yönlendiremedi; sohbet beyni (Gemini) gerekiyor.'
-        };
-        // İsteğe bağlı yönetici kancası: CLI yönetici ayarlıysa ona devret
-        const adminOk = !ADMIN.clientToken || req.headers['x-admin-token'] === ADMIN.clientToken;
-        if (ADMIN.admin && adminOk) {
-          return runAdmin(task, (adErr, adminOut) => {
-            if (adErr || !adminOut) return send(res, 200, needs, origin);
-            const results = Array.isArray(adminOut.results)
-              ? adminOut.results
-              : [{ type: 'admin', text: adminOut.text || '' }];
-            return send(res, 200, {
-              task,
-              status: 'done',
-              plan: ['admin'],
-              results,
-              reason: 'Yönetici kancası üretti'
-            }, origin);
-          });
+
+      runBrain(brain, task, context, keys, (err, result) => {
+        if (err || !result) {
+          return send(res, 200, { status: 'needs_brain', reason: err ? err.message : 'Beyin yanıt vermedi' }, origin);
         }
-        return send(res, 200, needs, origin);
-      }
-      runPlan(plan, (results) => {
-        send(res, 200, { task, status: 'done', plan: plan.map((p) => p.type), results }, origin);
+        send(res, 200, result, origin);
       });
     });
     return;
   }
+
+  // Görsel servisi
+  if (req.method === 'GET' && req.url.startsWith('/goruntu/')) {
+    return serveFile(res, decodeURIComponent(req.url.slice('/goruntu/'.length)), origin);
+  }
+
+  // Eski /run endpoint'i (geriye dönük uyumluluk)
+  if (req.method === 'POST' && req.url === '/run') {
+    let body = '';
+    req.on('data', (c) => { body += c; });
+    req.on('end', () => {
+      let task = '', context = '';
+      try { const p = JSON.parse(body); task = p.task || ''; context = p.context || ''; } catch(e) { task = body; }
+      if (!task) return send(res, 400, { error: 'Görev boş' }, origin);
+      runBrain('nara', task, context, {}, (err, result) => {
+        if (err || !result) return send(res, 200, { status: 'needs_brain', reason: 'Beyin yanıt vermedi' }, origin);
+        send(res, 200, result, origin);
+      });
+    });
+    return;
+  }
+
   send(res, 404, { error: 'Bilinmeyen yol' }, origin);
 });
 
 server.listen(PORT, () => {
-  console.log('Yönetici köprü: http://localhost:' + PORT);
-  console.log('Dosyalar: ' + OUTDIR);
+  console.log('=========================================');
+  console.log('  AI Asistanım Köprü Sunucusu');
+  console.log('  http://localhost:' + PORT);
+  console.log('=========================================');
+  console.log('  Config: ' + CONFIG_PATH);
+  console.log('  NaraKey: ' + (config.naraKey ? '✓' : '✗'));
+  console.log('  NvidiaKey: ' + (config.nvidiaKey ? '✓' : '✗'));
+  console.log('  AirforceKey: ' + (config.airforceKey ? '✓' : '✗'));
+  console.log('=========================================');
 });
 
 process.on('uncaughtException', (e) => console.log('Hata:', e.message));

@@ -3,50 +3,28 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AI Asistanım - Ücretsiz Web Aracı</title>
+  <title>AI Asistanım</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <div class="container">
     <header>
       <div class="hdr-left">
-        <p class="subtitle">Ücretsiz AI Aracı - Gemini API ile</p>
+        <p class="subtitle">Ücretsiz AI Aracı</p>
       </div>
       <div class="hdr-center">
         <h1>🤖 AI Asistanım</h1>
       </div>
       <div class="hdr-right">
-        <button id="providerBtn" class="provider-trigger">
-          <span id="providerIcon">🤖</span>
-          <span id="providerName">Köprü</span>
-          <span class="provider-arrow">▾</span>
-        </button>
         <span id="localStatus" class="status"></span>
+        <button id="settingsBtn" class="settings-trigger">⚙️</button>
       </div>
     </header>
-
-    <div class="settings">
-      <div class="cloud-fields" id="cloudFields">
-        <input type="password" id="apiKey" placeholder="Gemini auth anahtarınızı girin (AQ...)">
-        <button id="saveKey">Anahtarı Kaydet</button>
-        <label class="checkbox">
-          <input type="checkbox" id="rememberKey"> Anahtarı hatırla
-        </label>
-        <span id="keyStatus" class="status"></span>
-      </div>
-    </div>
-
-    <div class="notice" id="noticeCloud">
-      ✨ <b>Yerel AI modu seçili.</b> Kendi bilgisayarınızda çalışan Ollama ile <b>tamamen sınırsız ve ücretsiz</b> sohbet edin — anahtar gerekmez. (Bilgisayarınızda Ollama kurulu ve açık olmalı.) Görsel, ses, video, kod ve web arama araçları her iki modda da ücretsiz çalışır.
-    </div>
-    <div class="notice" id="noticeLocal" style="display:none">
-      ✨ <b>Bulut modu seçili.</b> Google AI Studio'dan alınan ücretsiz Gemini anahtarınızı girin. (Günlük ~20 istek kotası vardır; araçlar yine de sınırsızdır.)
-    </div>
 
     <div class="chat-area">
       <div id="messages" class="messages">
         <div class="message bot">
-          <strong>🤖 Asistan:</strong> Merhaba! Ben ücretsiz çalışan AI asistanınızım. Şunları yapabilirim:<br>🗣️ <b>Metni sesli okuma</b> (örn. "bunu sesli oku")<br>🖼️ <b>Resim üretme</b> (örn. "bir kedi resmi çiz")<br>🎬 <b>Video/Slayt anlatım</b> (örn. "bunun videosunu yap")<br>💻 <b>Kod çalıştırma</b> (örn. "2+2 kodu yaz ve çalıştır")<br>🔍 <b>Web arama</b> (örn. "internette ara...")<br>✍️ <b>Hikaye, özet, çeviri</b> yazma
+          <strong>🤖 Asistan:</strong> Merhaba! Ben AI asistanınızım. Şunları yapabilirim:<br>🗣️ <b>Sohbet</b> (hafızam var!)<br>🖼️ <b>Resim üretme</b> (örn. "bir kedi resmi çiz")<br>🎬 <b>Video üretme</b> (örn. "gelecek hakkında video üret")<br>💻 <b>Kod çalıştırma</b> (örn. "2+2 hesapla")<br>🔍 <b>Web arama</b> (örn. "internette ara...")<br>✍️ <b>Hikaye, özet, çeviri</b> yazma
         </div>
       </div>
     </div>
@@ -57,62 +35,80 @@
     </div>
   </div>
 
-  <!-- PROVIDER MODAL -->
-  <div id="providerModal" class="modal-overlay" style="display:none">
-    <div class="modal-panel">
-      <div class="modal-header">
-        <h2>Sağlayıcı & Model</h2>
-        <button id="modalClose" class="modal-close">&times;</button>
+  <!-- AYARLAR PANELİ -->
+  <div id="settingsOverlay" class="settings-overlay" style="display:none">
+    <div class="settings-panel">
+      <div class="settings-header">
+        <h2>⚙️ Ayarlar</h2>
+        <button id="settingsClose" class="settings-close">&times;</button>
       </div>
-      <div class="modal-body">
-        <div class="modal-sidebar">
-          <div class="provider-group active" data-provider="bridge">
-            <label class="provider-toggle"><input type="checkbox" class="provider-check-input" data-provider="bridge" checked disabled><span class="toggle-slider"></span></label>
-            <span class="provider-icon">🏭</span>
-            <div class="provider-info">
-              <div class="provider-title">Köpri</div>
-              <div class="provider-desc">Yönetici + Araçlar</div>
-            </div>
+      <div class="settings-body">
+        <div class="settings-section">
+          <h3>🧠 Beyin Modu</h3>
+          <p class="settings-desc">Hangi AI modelini kullanmak istediğinizi seçin.</p>
+          <div class="brain-selector">
+            <button class="brain-btn active" data-brain="nara">NaraRouter (Ücretsiz)</button>
+            <button class="brain-btn" data-brain="nvidia">NVIDIA NIM (Llama 3.3)</button>
+            <button class="brain-btn" data-brain="airforce">Airforce (Mimo Pro)</button>
           </div>
-          <div class="provider-group" data-provider="nara">
-            <label class="provider-toggle"><input type="checkbox" class="provider-check-input" data-provider="nara" checked disabled><span class="toggle-slider"></span></label>
-            <span class="provider-icon">🧠</span>
-            <div class="provider-info">
-              <div class="provider-title">NaraRouter</div>
-              <div class="provider-desc">Ücretsiz LLM (anahtar var)</div>
+        </div>
+
+        <div class="settings-section">
+          <h3>🔑 API Anahtarları</h3>
+          <p class="settings-desc">Anahtarları bir kez girin, sistem sürekli hatırlasın.</p>
+          
+          <div class="key-group">
+            <label>NVIDIA NIM API Key</label>
+            <div class="key-row">
+              <input type="password" id="nvidiaKeyInput" placeholder="nvapi-...">
+              <button id="nvidiaKeySave" class="key-save">Kaydet</button>
             </div>
+            <span id="nvidiaKeyStatus" class="key-status"></span>
           </div>
-          <div class="provider-group" data-provider="gemini">
-            <label class="provider-toggle"><input type="checkbox" class="provider-check-input" data-provider="gemini"><span class="toggle-slider"></span></label>
-            <span class="provider-icon">✨</span>
-            <div class="provider-info">
-              <div class="provider-title">Gemini</div>
-              <div class="provider-desc">Google AI (anahtar gerekli)</div>
+
+          <div class="key-group">
+            <label>Airforce API Key</label>
+            <div class="key-row">
+              <input type="password" id="airforceKeyInput" placeholder="API Key...">
+              <button id="airforceKeySave" class="key-save">Kaydet</button>
             </div>
+            <span id="airforceKeyStatus" class="key-status"></span>
           </div>
-          <div class="provider-group" data-provider="ollama">
-            <label class="provider-toggle"><input type="checkbox" class="provider-check-input" data-provider="ollama"><span class="toggle-slider"></span></label>
-            <span class="provider-icon">🦙</span>
-            <div class="provider-info">
-              <div class="provider-title">Ollama</div>
-              <div class="provider-desc">Yerel AI (anahtar gerekmez)</div>
+
+          <div class="key-group">
+            <label>NaraRouter API Key</label>
+            <div class="key-row">
+              <input type="password" id="naraKeyInput" placeholder="sk-nry-...">
+              <button id="naraKeySave" class="key-save">Kaydet</button>
             </div>
+            <span id="naraKeyStatus" class="key-status"></span>
           </div>
-          <div class="provider-group" data-provider="pollinations">
-            <label class="provider-toggle"><input type="checkbox" class="provider-check-input" data-provider="pollinations" checked disabled><span class="toggle-slider"></span></label>
-            <span class="provider-icon">🎨</span>
-            <div class="provider-info">
-              <div class="provider-title">Pollinations</div>
-              <div class="provider-desc">Görsel Üretimi (ücretsiz)</div>
+        </div>
+
+        <div class="settings-section">
+          <h3>📊 Durum</h3>
+          <div id="statusPanel" class="status-panel">
+            <div class="status-row">
+              <span>Köprü (Bridge)</span>
+              <span id="bridgeStatus" class="status-dot checking">Kontrol ediliyor...</span>
+            </div>
+            <div class="status-row">
+              <span>NaraRouter</span>
+              <span id="naraStatus" class="status-dot">-</span>
+            </div>
+            <div class="status-row">
+              <span>NVIDIA NIM</span>
+              <span id="nvidiaStatus" class="status-dot">-</span>
+            </div>
+            <div class="status-row">
+              <span>Airforce</span>
+              <span id="airforceStatus" class="status-dot">-</span>
             </div>
           </div>
         </div>
-        <div class="modal-content">
-          <div class="modal-search">
-            <input type="text" id="modelSearch" placeholder="Model ara..." autofocus>
-          </div>
-          <div class="modal-models" id="modelList"></div>
-          <div class="modal-config" id="providerConfig"></div>
+
+        <div class="settings-section">
+          <button id="checkAllStatus" class="check-btn">🔄 Tümünü Kontrol Et</button>
         </div>
       </div>
     </div>
