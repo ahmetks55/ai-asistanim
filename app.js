@@ -114,6 +114,18 @@ fetch(API + '/keys').then(r => r.json()).then(d => {
   document.getElementById('perplexityKey').value = d.perplexity ? '••••••••' : '';
   document.getElementById('openaiKey').value = d.openai ? '••••••••' : '';
   document.getElementById('anthropicKey').value = d.anthropic ? '••••••••' : '';
+  document.getElementById('veniceKey').value = d.venice ? '••••••••' : '';
+  document.getElementById('minimaxKey').value = d.minimax ? '••••••••' : '';
+  document.getElementById('moonshotKey').value = d.moonshot ? '••••••••' : '';
+  document.getElementById('stepfunKey').value = d.stepfun ? '••••••••' : '';
+  document.getElementById('zhipuKey').value = d.zhipu ? '••••••••' : '';
+  document.getElementById('volcengineKey').value = d.volcengine ? '••••••••' : '';
+  document.getElementById('alibabaKey').value = d.alibaba ? '••••••••' : '';
+  document.getElementById('baiduKey').value = d.baidu ? '••••••••' : '';
+  document.getElementById('sensenovaKey').value = d.sensenova ? '••••••••' : '';
+  document.getElementById('xiaomiKey').value = d.xiaomi ? '••••••••' : '';
+  document.getElementById('tencentKey').value = d.tencent ? '••••••••' : '';
+  document.getElementById('bytedanceKey').value = d.bytedance ? '••••••••' : '';
   updateBadge('nara', d.nara);
   updateBadge('nvidia', d.nvidia);
   updateBadge('airforce', d.airforce);
@@ -144,6 +156,18 @@ fetch(API + '/keys').then(r => r.json()).then(d => {
   updateBadge('perplexity', d.perplexity);
   updateBadge('openai', d.openai);
   updateBadge('anthropic', d.anthropic);
+  updateBadge('venice', d.venice);
+  updateBadge('minimax', d.minimax);
+  updateBadge('moonshot', d.moonshot);
+  updateBadge('stepfun', d.stepfun);
+  updateBadge('zhipu', d.zhipu);
+  updateBadge('volcengine', d.volcengine);
+  updateBadge('alibaba', d.alibaba);
+  updateBadge('baidu', d.baidu);
+  updateBadge('sensenova', d.sensenova);
+  updateBadge('xiaomi', d.xiaomi);
+  updateBadge('tencent', d.tencent);
+  updateBadge('bytedance', d.bytedance);
 }).catch(() => {});
 
 function saveKey(who) {

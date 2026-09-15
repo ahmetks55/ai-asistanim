@@ -65,7 +65,19 @@ const ENDPOINTS = {
   xai: 'https://api.x.ai/v1/chat/completions',
   perplexity: 'https://api.perplexity.ai/chat/completions',
   openai: 'https://api.openai.com/v1/chat/completions',
-  anthropic: 'https://api.anthropic.com/v1/messages'
+  anthropic: 'https://api.anthropic.com/v1/messages',
+  venice: 'https://api.venice.ai/api/v1/chat/completions',
+  minimax: 'https://api.minimax.chat/v1/text/chatcompletion_pro',
+  moonshot: 'https://api.moonshot.cn/v1/chat/completions',
+  stepfun: 'https://api.stepfun.com/v1/chat/completions',
+  zhipu: 'https://open.bigmodel.cn/api/paas/v4/chat/completions',
+  volcengine: 'https://ark.cn-beijing.volces.com/api/v3/chat/completions',
+  alibaba: 'https://dashscope-intl.aliyuncs.com/compatible-mode/v1/chat/completions',
+  baidu: 'https://aip.baidubce.com/rpc/2.0/ai_custom/v1/wenxinworkshop/chat',
+  sensenova: 'https://api.sensenova.cn/v1/chat/completions',
+  xiaomi: 'https://api.xiaomi.com/v1/chat/completions',
+  tencent: 'https://hunyuan.tencentcloudapi.com/v1/chat/completions',
+  bytedance: 'https://ark.cn-beijing.volces.com/api/v3/chat/completions'
 };
 
 function huggingFaceVideo(prompt, model, apiKey, cb) {
@@ -156,7 +168,10 @@ const server = http.createServer((req, res) => {
       together: !!k.together, fireworks: !!k.fireworks, deepinfra: !!k.deepinfra, novita: !!k.novita,
       ai21: !!k.ai21, upstage: !!k.upstage, reka: !!k.reka, nebius: !!k.nebius,
       baseten: !!k.baseten, sambanova: !!k.sambanova, xai: !!k.xai, perplexity: !!k.perplexity,
-      openai: !!k.openai, anthropic: !!k.anthropic
+      openai: !!k.openai, anthropic: !!k.anthropic,
+      venice: !!k.venice, minimax: !!k.minimax, moonshot: !!k.moonshot, stepfun: !!k.stepfun,
+      zhipu: !!k.zhipu, volcengine: !!k.volcengine, alibaba: !!k.alibaba, baidu: !!k.baidu,
+      sensenova: !!k.sensenova, xiaomi: !!k.xiaomi, tencent: !!k.tencent, bytedance: !!k.bytedance
     }));
   }
 

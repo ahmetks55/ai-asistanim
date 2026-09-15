@@ -133,6 +133,43 @@
           <optgroup label="Anthropic (Deneme)">
             <option value="anthropic:claude-3-5-haiku-20241022">Claude 3.5 Haiku</option>
           </optgroup>
+          <optgroup label="Venice AI (Ücretsiz)">
+            <option value="venice:llama-3.3-70b">Llama 3.3 70B</option>
+          </optgroup>
+          <optgroup label="OpenBMB MiniMax (Deneme)">
+            <option value="minimax:MiniMax-Text-01">MiniMax Text 01</option>
+          </optgroup>
+          <optgroup label="Moonshot AI (Deneme)">
+            <option value="moonshot:moonshot-v1-8k">Moonshot V1 8K</option>
+          </optgroup>
+          <optgroup label="StepFun (Deneme)">
+            <option value="stepfun:step-1-8k">Step 1 8K</option>
+          </optgroup>
+          <optgroup label="Zhipu AI (Deneme)">
+            <option value="zhipu:glm-4-flash">GLM 4 Flash</option>
+          </optgroup>
+          <optgroup label="Volcengine (Deneme)">
+            <option value="volcengine:doubao-pro-256k">Doubao Pro 256K</option>
+          </optgroup>
+          <optgroup label="Alibaba Qwen (Deneme)">
+            <option value="alibaba:qwen-max">Qwen Max</option>
+            <option value="alibaba:qwen-plus">Qwen Plus</option>
+          </optgroup>
+          <optgroup label="Baidu (Deneme)">
+            <option value="baidu:ernie-4.0-turbo">ERNIE 4.0 Turbo</option>
+          </optgroup>
+          <optgroup label="SenseNova (Deneme)">
+            <option value="sensenova:SenseChat-5">SenseChat 5</option>
+          </optgroup>
+          <optgroup label="Xiaomi (Deneme)">
+            <option value="xiaomi:MiLM-6B">MiLM 6B</option>
+          </optgroup>
+          <optgroup label="Tencent (Deneme)">
+            <option value="tencent:hunyuan-pro">Hunyuan Pro</option>
+          </optgroup>
+          <optgroup label="ByteDance (Deneme)">
+            <option value="bytedance:doubao-pro-256k">Doubao Pro 256K</option>
+          </optgroup>
           <optgroup label="NVIDIA NIM">
             <option value="nvidia:deepseek-ai/deepseek-v4-flash-0731">DeepSeek V4 Flash</option>
           </optgroup>
@@ -606,6 +643,210 @@
               <button onclick="event.stopPropagation();saveKey('anthropic')" class="save-btn">Kaydet</button>
             </div>
             <small id="anthropicStatus" class="status-text"></small>
+          </div>
+        </div>
+
+        <div class="provider-card" onclick="toggleProvider('venice')">
+          <div class="provider-header">
+            <span class="provider-icon">🎭</span>
+            <span class="provider-name">Venice AI</span>
+            <span id="veniceBadge" class="provider-badge">✗ Kayıtlı Değil</span>
+            <span class="provider-arrow">▼</span>
+          </div>
+          <div id="venicePanel" class="provider-panel">
+            <small class="provider-desc">Gizlilik odaklı - Llama modelleri ücretsiz</small>
+            <div class="key-row">
+              <input type="password" id="veniceKey" placeholder="API Key...">
+              <button onclick="event.stopPropagation();saveKey('venice')" class="save-btn">Kaydet</button>
+            </div>
+            <small id="veniceStatus" class="status-text"></small>
+          </div>
+        </div>
+
+        <div class="provider-card" onclick="toggleProvider('minimax')">
+          <div class="provider-header">
+            <span class="provider-icon">🔲</span>
+            <span class="provider-name">MiniMax (OpenBMB)</span>
+            <span id="minimaxBadge" class="provider-badge">✗ Kayıtlı Değil</span>
+            <span class="provider-arrow">▼</span>
+          </div>
+          <div id="minimaxPanel" class="provider-panel">
+            <small class="provider-desc">MiniMax-Text-01 deneme</small>
+            <div class="key-row">
+              <input type="password" id="minimaxKey" placeholder="API Key...">
+              <button onclick="event.stopPropagation();saveKey('minimax')" class="save-btn">Kaydet</button>
+            </div>
+            <small id="minimaxStatus" class="status-text"></small>
+          </div>
+        </div>
+
+        <div class="provider-card" onclick="toggleProvider('moonshot')">
+          <div class="provider-header">
+            <span class="provider-icon">🌙</span>
+            <span class="provider-name">Moonshot AI</span>
+            <span id="moonshotBadge" class="provider-badge">✗ Kayıtlı Değil</span>
+            <span class="provider-arrow">▼</span>
+          </div>
+          <div id="moonshotPanel" class="provider-panel">
+            <small class="provider-desc">Kimber deneme - Çinli model</small>
+            <div class="key-row">
+              <input type="password" id="moonshotKey" placeholder="API Key...">
+              <button onclick="event.stopPropagation();saveKey('moonshot')" class="save-btn">Kaydet</button>
+            </div>
+            <small id="moonshotStatus" class="status-text"></small>
+          </div>
+        </div>
+
+        <div class="provider-card" onclick="toggleProvider('stepfun')">
+          <div class="provider-header">
+            <span class="provider-icon">👣</span>
+            <span class="provider-name">StepFun</span>
+            <span id="stepfunBadge" class="provider-badge">✗ Kayıtlı Değil</span>
+            <span class="provider-arrow">▼</span>
+          </div>
+          <div id="stepfunPanel" class="provider-panel">
+            <small class="provider-desc">Step 1 deneme - Çinli model</small>
+            <div class="key-row">
+              <input type="password" id="stepfunKey" placeholder="API Key...">
+              <button onclick="event.stopPropagation();saveKey('stepfun')" class="save-btn">Kaydet</button>
+            </div>
+            <small id="stepfunStatus" class="status-text"></small>
+          </div>
+        </div>
+
+        <div class="provider-card" onclick="toggleProvider('zhipu')">
+          <div class="provider-header">
+            <span class="provider-icon">🧠</span>
+            <span class="provider-name">Zhipu AI (GLM)</span>
+            <span id="zhipuBadge" class="provider-badge">✗ Kayıtlı Değil</span>
+            <span class="provider-arrow">▼</span>
+          </div>
+          <div id="zhipuPanel" class="provider-panel">
+            <small class="provider-desc">GLM 4 Flash ücretsiz</small>
+            <div class="key-row">
+              <input type="password" id="zhipuKey" placeholder="API Key...">
+              <button onclick="event.stopPropagation();saveKey('zhipu')" class="save-btn">Kaydet</button>
+            </div>
+            <small id="zhipuStatus" class="status-text"></small>
+          </div>
+        </div>
+
+        <div class="provider-card" onclick="toggleProvider('volcengine')">
+          <div class="provider-header">
+            <span class="provider-icon">🌋</span>
+            <span class="provider-name">Volcengine (ByteDance)</span>
+            <span id="volcengineBadge" class="provider-badge">✗ Kayıtlı Değil</span>
+            <span class="provider-arrow">▼</span>
+          </div>
+          <div id="volcenginePanel" class="provider-panel">
+            <small class="provider-desc">Doubao Pro 256K deneme</small>
+            <div class="key-row">
+              <input type="password" id="volcengineKey" placeholder="API Key...">
+              <button onclick="event.stopPropagation();saveKey('volcengine')" class="save-btn">Kaydet</button>
+            </div>
+            <small id="volcengineStatus" class="status-text"></small>
+          </div>
+        </div>
+
+        <div class="provider-card" onclick="toggleProvider('alibaba')">
+          <div class="provider-header">
+            <span class="provider-icon">🟠</span>
+            <span class="provider-name">Alibaba (Qwen)</span>
+            <span id="alibabaBadge" class="provider-badge">✗ Kayıtlı Değil</span>
+            <span class="provider-arrow">▼</span>
+          </div>
+          <div id="alibabaPanel" class="provider-panel">
+            <small class="provider-desc">Qwen Max/Plus deneme</small>
+            <div class="key-row">
+              <input type="password" id="alibabaKey" placeholder="API Key...">
+              <button onclick="event.stopPropagation();saveKey('alibaba')" class="save-btn">Kaydet</button>
+            </div>
+            <small id="alibabaStatus" class="status-text"></small>
+          </div>
+        </div>
+
+        <div class="provider-card" onclick="toggleProvider('baidu')">
+          <div class="provider-header">
+            <span class="provider-icon">🔵</span>
+            <span class="provider-name">Baidu (ERNIE)</span>
+            <span id="baiduBadge" class="provider-badge">✗ Kayıtlı Değil</span>
+            <span class="provider-arrow">▼</span>
+          </div>
+          <div id="baiduPanel" class="provider-panel">
+            <small class="provider-desc">ERNIE 4.0 Turbo deneme</small>
+            <div class="key-row">
+              <input type="password" id="baiduKey" placeholder="API Key...">
+              <button onclick="event.stopPropagation();saveKey('baidu')" class="save-btn">Kaydet</button>
+            </div>
+            <small id="baiduStatus" class="status-text"></small>
+          </div>
+        </div>
+
+        <div class="provider-card" onclick="toggleProvider('sensenova')">
+          <div class="provider-header">
+            <span class="provider-icon">🔬</span>
+            <span class="provider-name">SenseNova</span>
+            <span id="sensenovaBadge" class="provider-badge">✗ Kayıtlı Değil</span>
+            <span class="provider-arrow">▼</span>
+          </div>
+          <div id="sensenovaPanel" class="provider-panel">
+            <small class="provider-desc">SenseChat 5 deneme</small>
+            <div class="key-row">
+              <input type="password" id="sensenovaKey" placeholder="API Key...">
+              <button onclick="event.stopPropagation();saveKey('sensenova')" class="save-btn">Kaydet</button>
+            </div>
+            <small id="sensenovaStatus" class="status-text"></small>
+          </div>
+        </div>
+
+        <div class="provider-card" onclick="toggleProvider('xiaomi')">
+          <div class="provider-header">
+            <span class="provider-icon">📱</span>
+            <span class="provider-name">Xiaomi</span>
+            <span id="xiaomiBadge" class="provider-badge">✗ Kayıtlı Değil</span>
+            <span class="provider-arrow">▼</span>
+          </div>
+          <div id="xiaomiPanel" class="provider-panel">
+            <small class="provider-desc">MiLM 6B deneme</small>
+            <div class="key-row">
+              <input type="password" id="xiaomiKey" placeholder="API Key...">
+              <button onclick="event.stopPropagation();saveKey('xiaomi')" class="save-btn">Kaydet</button>
+            </div>
+            <small id="xiaomiStatus" class="status-text"></small>
+          </div>
+        </div>
+
+        <div class="provider-card" onclick="toggleProvider('tencent')">
+          <div class="provider-header">
+            <span class="provider-icon">🐧</span>
+            <span class="provider-name">Tencent (Hunyuan)</span>
+            <span id="tencentBadge" class="provider-badge">✗ Kayıtlı Değil</span>
+            <span class="provider-arrow">▼</span>
+          </div>
+          <div id="tencentPanel" class="provider-panel">
+            <small class="provider-desc">Hunyuan Pro deneme</small>
+            <div class="key-row">
+              <input type="password" id="tencentKey" placeholder="API Key...">
+              <button onclick="event.stopPropagation();saveKey('tencent')" class="save-btn">Kaydet</button>
+            </div>
+            <small id="tencentStatus" class="status-text"></small>
+          </div>
+        </div>
+
+        <div class="provider-card" onclick="toggleProvider('bytedance')">
+          <div class="provider-header">
+            <span class="provider-icon">🎵</span>
+            <span class="provider-name">ByteDance (Doubao)</span>
+            <span id="bytedanceBadge" class="provider-badge">✗ Kayıtlı Değil</span>
+            <span class="provider-arrow">▼</span>
+          </div>
+          <div id="bytedancePanel" class="provider-panel">
+            <small class="provider-desc">Doubao Pro 256K deneme</small>
+            <div class="key-row">
+              <input type="password" id="bytedanceKey" placeholder="API Key...">
+              <button onclick="event.stopPropagation();saveKey('bytedance')" class="save-btn">Kaydet</button>
+            </div>
+            <small id="bytedanceStatus" class="status-text"></small>
           </div>
         </div>
 
