@@ -112,27 +112,32 @@ function nvidiaChat(task, context, key, cb) {
   const msgs = [];
   if (context) msgs.push({ role: 'system', content: context });
   msgs.push({ role: 'user', content: task });
-  const body = JSON.stringify({ model: 'meta/llama-3.3-70b-instruct', messages: msgs, max_tokens: 1024, stream: false });
+  const body = JSON.stringify({ model: 'meta/llama-3.3-70b-instruct', messages: msgs, max_tokens: 1024 });
   const req = https.request({
     hostname: 'integrate.api.nvidia.com',
     port: 443,
     path: '/v1/chat/completions',
     method: 'POST',
-    headers: { 'Authorization': 'Bearer ' + k, 'Content-Type': 'application/json' },
+    headers: { 'Authorization': 'Bearer ' + k, 'Content-Type': 'application/json', 'Accept': 'application/json' },
     timeout: 30000
   }, (res) => {
     let data = '';
     res.on('data', (c) => { data += c; });
     res.on('end', () => {
-      if (res.statusCode >= 400) return cb(new Error('NVIDIA HTTP ' + res.statusCode));
+      console.log('[NVIDIA] Status:', res.statusCode);
+      if (res.statusCode >= 400) {
+        console.log('[NVIDIA] Hata:', data.slice(0, 500));
+        return cb(new Error('NVIDIA HTTP ' + res.statusCode + ': ' + data.slice(0, 200)));
+      }
       try {
         const j = JSON.parse(data);
         const text = (j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content) || '';
+        if (!text) console.log('[NVIDIA] Boş yanıt:', JSON.stringify(j).slice(0, 300));
         cb(null, text.trim() || null);
-      } catch(e) { cb(null, null); }
+      } catch(e) { console.log('[NVIDIA] Parse hatası:', e.message); cb(null, null); }
     });
   });
-  req.on('error', (e) => cb(e));
+  req.on('error', (e) => { console.log('[NVIDIA] Bağlantı hatası:', e.message); cb(e); });
   req.on('timeout', () => req.destroy(new Error('timeout')));
   req.write(body);
   req.end();
@@ -145,27 +150,32 @@ function airforceChat(task, context, key, cb) {
   const msgs = [];
   if (context) msgs.push({ role: 'system', content: context });
   msgs.push({ role: 'user', content: task });
-  const body = JSON.stringify({ model: 'mimo-v2.5-pro', messages: msgs, max_tokens: 1024, stream: false });
+  const body = JSON.stringify({ model: 'mimo-v2.5-pro', messages: msgs, max_tokens: 1024 });
   const req = https.request({
-    hostname: 'api.air.force',
+    hostname: 'api.airforce',
     port: 443,
     path: '/v1/chat/completions',
     method: 'POST',
-    headers: { 'Authorization': 'Bearer ' + k, 'Content-Type': 'application/json' },
+    headers: { 'Authorization': 'Bearer ' + k, 'Content-Type': 'application/json', 'Accept': 'application/json' },
     timeout: 30000
   }, (res) => {
     let data = '';
     res.on('data', (c) => { data += c; });
     res.on('end', () => {
-      if (res.statusCode >= 400) return cb(new Error('Airforce HTTP ' + res.statusCode));
+      console.log('[Airforce] Status:', res.statusCode);
+      if (res.statusCode >= 400) {
+        console.log('[Airforce] Hata:', data.slice(0, 500));
+        return cb(new Error('Airforce HTTP ' + res.statusCode + ': ' + data.slice(0, 200)));
+      }
       try {
         const j = JSON.parse(data);
         const text = (j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content) || '';
+        if (!text) console.log('[Airforce] Boş yanıt:', JSON.stringify(j).slice(0, 300));
         cb(null, text.trim() || null);
-      } catch(e) { cb(null, null); }
+      } catch(e) { console.log('[Airforce] Parse hatası:', e.message); cb(null, null); }
     });
   });
-  req.on('error', (e) => cb(e));
+  req.on('error', (e) => { console.log('[Airforce] Bağlantı hatası:', e.message); cb(e); });
   req.on('timeout', () => req.destroy(new Error('timeout')));
   req.write(body);
   req.end();
@@ -243,6 +253,17 @@ const server = http.createServer((req, res) => {
   // Health
   if (req.method === 'GET' && req.url === '/health') {
     return send(res, 200, { ok: true, tool: 'köprü' }, origin);
+  }
+
+  // Test brain
+  if (req.method === 'GET' && req.url === '/test-brain') {
+    const brain = 'nara';
+    const keys = { naraKey: config.naraKey || '', nvidiaKey: config.nvidiaKey || '', airforceKey: config.airforceKey || '' };
+    runBrain(brain, 'Merhaba, nasılsın?', '', keys, (err, result) => {
+      if (err) return send(res, 200, { error: err.message, config: { nara: !!keys.naraKey, nvidia: !!keys.nvidiaKey, airforce: !!keys.airforceKey } }, origin);
+      send(res, 200, result, origin);
+    });
+    return;
   }
 
   // Config durumu
