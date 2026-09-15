@@ -3,7 +3,6 @@ const API = 'http://localhost:8788';
 const messagesEl = document.getElementById('messages');
 const userInput = document.getElementById('userInput');
 const sendBtn = document.getElementById('sendBtn');
-const brainSelect = document.getElementById('brainSelect');
 const connStatus = document.getElementById('connStatus');
 
 let chatHistory = [];
