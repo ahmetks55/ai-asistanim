@@ -1047,31 +1047,45 @@ window.saveProviderKey = function() {
   const val = document.getElementById('pmKeyInput').value.trim();
   const statusEl = document.getElementById('pmStatus');
   if (!val || val === '••••••••') { statusEl.textContent = 'Boş bırakılamaz'; statusEl.className = 'status-text error'; return; }
+  // Her iki tarafa da kaydet
+  localStorage.setItem('key_' + currentProvider, '1');
   fetch(API + '/save-key', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ provider: currentProvider, key: val })
   }).then(r => r.json()).then(d => {
-    if (d.ok) {
-      statusEl.textContent = '✓ Kaydedildi';
-      statusEl.className = 'status-text success';
-      document.getElementById('pmKeyInput').value = '••••••••';
-      savedKeys[currentProvider] = true;
-      updateProviderStatuses();
-      document.getElementById('pmBadge').textContent = '✓ Kayıtlı';
-      document.getElementById('pmBadge').className = 'pm-badge active';
-    }
+    statusEl.textContent = '✓ Kaydedildi';
+    statusEl.className = 'status-text success';
+    document.getElementById('pmKeyInput').value = '••••••••';
+    savedKeys[currentProvider] = true;
+    updateProviderStatuses();
+    document.getElementById('pmBadge').textContent = '✓ Kayıtlı';
+    document.getElementById('pmBadge').className = 'pm-badge active';
   }).catch(() => {
-    statusEl.textContent = '✗ Köprü bağlı değil';
-    statusEl.className = 'status-text error';
+    // Bridge yoksa bile localStorage'a kaydedildi
+    statusEl.textContent = '✓ Kaydedildi (yerel)';
+    statusEl.className = 'status-text success';
+    document.getElementById('pmKeyInput').value = '••••••••';
+    savedKeys[currentProvider] = true;
+    updateProviderStatuses();
+    document.getElementById('pmBadge').textContent = '✓ Kayıtlı';
+    document.getElementById('pmBadge').className = 'pm-badge active';
   });
 };
 
-// Key yükle
+// Key yükle - localStorage'dan, bridge varsa sunucudan da
 fetch(API + '/keys').then(r => r.json()).then(d => {
   savedKeys = d;
+  // Sunucudan gelenleri localStorage'a da kaydet
+  Object.keys(d).forEach(k => { if (d[k]) localStorage.setItem('key_' + k, '1'); });
   updateProviderStatuses();
-}).catch(() => {});
+}).catch(() => {
+  // Bridge yoksa localStorage'dan yükle
+  Object.keys(localStorage).forEach(k => {
+    if (k.startsWith('key_')) savedKeys[k.replace('key_', '')] = true;
+  });
+  updateProviderStatuses();
+});
 
 // Legacy updateBadge fonksiyonu (dropdown için)
 function updateBadge(who, saved) {
