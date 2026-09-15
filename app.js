@@ -8,6 +8,51 @@ const connStatus = document.getElementById('connStatus');
 
 let chatHistory = [];
 
+// Bildirim sesleri
+function notifySound() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(880, ctx.currentTime);
+    osc.frequency.setValueAtTime(1100, ctx.currentTime + 0.1);
+    gain.gain.setValueAtTime(0.3, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
+    osc.start(ctx.currentTime); osc.stop(ctx.currentTime + 0.3);
+  } catch(e) {}
+}
+function errorSound() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(200, ctx.currentTime);
+    osc.frequency.setValueAtTime(150, ctx.currentTime + 0.15);
+    gain.gain.setValueAtTime(0.3, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.4);
+    osc.start(ctx.currentTime); osc.stop(ctx.currentTime + 0.4);
+  } catch(e) {}
+}
+function connErrorSound() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.type = 'square';
+    osc.frequency.setValueAtTime(300, ctx.currentTime);
+    osc.frequency.setValueAtTime(200, ctx.currentTime + 0.1);
+    osc.frequency.setValueAtTime(100, ctx.currentTime + 0.2);
+    gain.gain.setValueAtTime(0.2, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.5);
+    osc.start(ctx.currentTime); osc.stop(ctx.currentTime + 0.5);
+  } catch(e) {}
+}
+
 // Köprü durumu
 fetch(API + '/health').then(r => r.json()).then(() => {
   connStatus.textContent = '🟢 Köprü aktif';
@@ -148,15 +193,18 @@ async function send() {
       const d = await r.json();
       typing.remove();
       if (d.reply) {
+        notifySound();
         addMessage(d.reply, 'bot');
         chatHistory.push({ role: 'user', content: text });
         chatHistory.push({ role: 'assistant', content: d.reply });
       } else {
+        errorSound();
         addMessage('Hata: ' + (d.error || 'Yanıt alınamadı'), 'bot');
       }
     }
   } catch(e) {
     typing.remove();
+    connErrorSound();
     addMessage('Köprüye bağlanılamadı. Köprüyü başlatın: node server.js', 'bot');
   }
   sendBtn.disabled = false;
