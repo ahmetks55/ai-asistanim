@@ -75,7 +75,7 @@ const PROVIDERS = {
     why: 'Fransa merkezli Mistral AI\'ın modelleri. Kod yazma uzmanı Codestral ve genel amaçlı Mistral Small ücretsiz sunuluyor.',
     url: 'https://console.mistral.ai/api-keys/',
     urlText: 'console.mistral.ai',
-    keyFormat: '...')
+    keyFormat: '...',
     models: 'Mistral Small, Codestral, Devstral Small',
     pricing: 'Ücretsiz katman mevcut',
     limit: 'Ordu Roland ücretsiz'
