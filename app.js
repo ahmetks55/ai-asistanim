@@ -67,13 +67,33 @@ document.getElementById('settingsBtn').onclick = () => document.getElementById('
 document.getElementById('closeSettings').onclick = () => document.getElementById('settingsModal').style.display = 'none';
 document.getElementById('settingsModal').onclick = (e) => { if (e.target.id === 'settingsModal') e.target.style.display = 'none'; };
 
+// Provider toggle
+function toggleProvider(who) {
+  const card = document.querySelector('[onclick="toggleProvider(\'' + who + '\')"]');
+  card.classList.toggle('open');
+}
+window.toggleProvider = toggleProvider;
+
+function updateBadge(who, saved) {
+  const badge = document.getElementById(who + 'Badge');
+  if (badge) {
+    badge.textContent = saved ? '✓ Kayıtlı' : '✗ Kayıtlı Değil';
+    badge.className = 'provider-badge' + (saved ? ' active' : '');
+  }
+}
+
 // Key yükle
 fetch(API + '/keys').then(r => r.json()).then(d => {
-  document.getElementById('nvidiaKey').value = d.nvidia ? '••••••••' : '';
   document.getElementById('naraKey').value = d.nara ? '••••••••' : '';
+  document.getElementById('nvidiaKey').value = d.nvidia ? '••••••••' : '';
   document.getElementById('airforceKey').value = d.airforce ? '••••••••' : '';
   document.getElementById('pollinationsKey').value = d.pollinations ? '••••••••' : '';
   document.getElementById('hfKey').value = d.hf ? '••••••••' : '';
+  updateBadge('nara', d.nara);
+  updateBadge('nvidia', d.nvidia);
+  updateBadge('airforce', d.airforce);
+  updateBadge('pollinations', d.pollinations);
+  updateBadge('hf', d.hf);
 }).catch(() => {});
 
 function saveKey(who) {
@@ -89,6 +109,7 @@ function saveKey(who) {
       statusEl.textContent = '✓ Kaydedildi';
       statusEl.className = 'status-text success';
       document.getElementById(who + 'Key').value = '••••••••';
+      updateBadge(who, true);
     }
   }).catch(() => {
     statusEl.textContent = '✗ Köprü bağlı değil';

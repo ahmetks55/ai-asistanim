@@ -66,45 +66,89 @@
         <button id="closeSettings" class="close-btn">&times;</button>
       </div>
       <div class="modal-body">
-        <div class="setting-group">
-          <label>NaraRouter API Key</label>
-          <div class="key-row">
-            <input type="password" id="naraKey" placeholder="sk-nry-...">
-            <button onclick="saveKey('nara')" class="save-btn">Kaydet</button>
+        <div class="provider-card" onclick="toggleProvider('nara')">
+          <div class="provider-header">
+            <span class="provider-icon">🟢</span>
+            <span class="provider-name">NaraRouter</span>
+            <span id="naraBadge" class="provider-badge">✓ Kayıtlı</span>
+            <span class="provider-arrow">▼</span>
           </div>
-          <small id="naraStatus" class="status-text"></small>
+          <div id="naraPanel" class="provider-panel">
+            <small class="provider-desc">Ücretsiz sohbet modelleri (Hy3, Agnes)</small>
+            <div class="key-row">
+              <input type="password" id="naraKey" placeholder="sk-nry-...">
+              <button onclick="event.stopPropagation();saveKey('nara')" class="save-btn">Kaydet</button>
+            </div>
+            <small id="naraStatus" class="status-text"></small>
+          </div>
         </div>
-        <div class="setting-group">
-          <label>NVIDIA NIM API Key</label>
-          <div class="key-row">
-            <input type="password" id="nvidiaKey" placeholder="nvapi-...">
-            <button onclick="saveKey('nvidia')" class="save-btn">Kaydet</button>
+
+        <div class="provider-card" onclick="toggleProvider('nvidia')">
+          <div class="provider-header">
+            <span class="provider-icon">🟢</span>
+            <span class="provider-name">NVIDIA NIM</span>
+            <span id="nvidiaBadge" class="provider-badge">✗ Kayıtlı Değil</span>
+            <span class="provider-arrow">▼</span>
           </div>
-          <small id="nvidiaStatus" class="status-text"></small>
+          <div id="nvidiaPanel" class="provider-panel">
+            <small class="provider-desc">DeepSeek, Qwen modelleri</small>
+            <div class="key-row">
+              <input type="password" id="nvidiaKey" placeholder="nvapi-...">
+              <button onclick="event.stopPropagation();saveKey('nvidia')" class="save-btn">Kaydet</button>
+            </div>
+            <small id="nvidiaStatus" class="status-text"></small>
+          </div>
         </div>
-        <div class="setting-group">
-          <label>Airforce API Key</label>
-          <div class="key-row">
-            <input type="password" id="airforceKey" placeholder="API Key...">
-            <button onclick="saveKey('airforce')" class="save-btn">Kaydet</button>
+
+        <div class="provider-card" onclick="toggleProvider('airforce')">
+          <div class="provider-header">
+            <span class="provider-icon">🟢</span>
+            <span class="provider-name">Airforce</span>
+            <span id="airforceBadge" class="provider-badge">✗ Kayıtlı Değil</span>
+            <span class="provider-arrow">▼</span>
           </div>
-          <small id="airforceStatus" class="status-text"></small>
+          <div id="airforcePanel" class="provider-panel">
+            <small class="provider-desc">MiMo, DeepSeek modelleri</small>
+            <div class="key-row">
+              <input type="password" id="airforceKey" placeholder="API Key...">
+              <button onclick="event.stopPropagation();saveKey('airforce')" class="save-btn">Kaydet</button>
+            </div>
+            <small id="airforceStatus" class="status-text"></small>
+          </div>
         </div>
-        <div class="setting-group">
-          <label>Pollinations API Key (Video/Görsel için)</label>
-          <div class="key-row">
-            <input type="password" id="pollinationsKey" placeholder="pk_ veya sk_...">
-            <button onclick="saveKey('pollinations')" class="save-btn">Kaydet</button>
+
+        <div class="provider-card" onclick="toggleProvider('pollinations')">
+          <div class="provider-header">
+            <span class="provider-icon">🟣</span>
+            <span class="provider-name">Pollinations</span>
+            <span id="pollinationsBadge" class="provider-badge">✗ Kayıtlı Değil</span>
+            <span class="provider-arrow">▼</span>
           </div>
-          <small id="pollinationsStatus" class="status-text"></small>
+          <div id="pollinationsPanel" class="provider-panel">
+            <small class="provider-desc">Görsel + Video üretimi (bakiye gerekir)</small>
+            <div class="key-row">
+              <input type="password" id="pollinationsKey" placeholder="pk_ veya sk_...">
+              <button onclick="event.stopPropagation();saveKey('pollinations')" class="save-btn">Kaydet</button>
+            </div>
+            <small id="pollinationsStatus" class="status-text"></small>
+          </div>
         </div>
-        <div class="setting-group">
-          <label>Hugging Face API Key (Ücretsiz Video)</label>
-          <div class="key-row">
-            <input type="password" id="hfKey" placeholder="hf_...">
-            <button onclick="saveKey('hf')" class="save-btn">Kaydet</button>
+
+        <div class="provider-card" onclick="toggleProvider('hf')">
+          <div class="provider-header">
+            <span class="provider-icon">🟠</span>
+            <span class="provider-name">Hugging Face</span>
+            <span id="hfBadge" class="provider-badge">✗ Kayıtlı Değil</span>
+            <span class="provider-arrow">▼</span>
           </div>
-          <small id="hfStatus" class="status-text"></small>
+          <div id="hfPanel" class="provider-panel">
+            <small class="provider-desc">Ücretsiz video denemesi (sınırlı)</small>
+            <div class="key-row">
+              <input type="password" id="hfKey" placeholder="hf_...">
+              <button onclick="event.stopPropagation();saveKey('hf')" class="save-btn">Kaydet</button>
+            </div>
+            <small id="hfStatus" class="status-text"></small>
+          </div>
         </div>
       </div>
     </div>

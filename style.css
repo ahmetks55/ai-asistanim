@@ -260,22 +260,72 @@ textarea::placeholder {
 }
 
 .modal-body {
-  padding: 20px;
+  padding: 16px;
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 8px;
+}
+
+/* Provider Cards */
+.provider-card {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s;
+  overflow: hidden;
+}
+.provider-card:hover {
+  border-color: var(--primary);
+}
+.provider-card.open {
+  border-color: var(--primary);
+}
+.provider-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+}
+.provider-icon { font-size: 16px; }
+.provider-name { flex: 1; font-weight: 600; font-size: 14px; }
+.provider-badge {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: rgba(255,255,255,0.05);
+  color: var(--text2);
+}
+.provider-badge.active {
+  background: rgba(76,175,80,0.2);
+  color: #4caf50;
+}
+.provider-arrow {
+  font-size: 10px;
+  color: var(--text2);
+  transition: transform 0.2s;
+}
+.provider-card.open .provider-arrow {
+  transform: rotate(180deg);
+}
+.provider-panel {
+  display: none;
+  padding: 0 14px 14px;
+}
+.provider-card.open .provider-panel {
+  display: block;
+}
+.provider-desc {
+  display: block;
+  margin-bottom: 10px;
+  color: var(--text2);
+  font-size: 12px;
 }
 
 .setting-group {
   display: flex;
   flex-direction: column;
   gap: 8px;
-}
-
-.setting-group label {
-  font-size: 14px;
-  font-weight: 500;
-  color: var(--text2);
 }
 
 .key-row {
