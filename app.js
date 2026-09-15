@@ -151,10 +151,7 @@ async function sendMessage() {
       body: JSON.stringify({
         task: text,
         context: chatHistory.map(m => m.role + ': ' + m.content).join('\n'),
-        brain: activeBrain,
-        nvidiaKey: nvidiaKey,
-        airforceKey: airforceKey,
-        naraKey: naraKey
+        brain: activeBrain
       })
     });
 
@@ -165,14 +162,12 @@ async function sendMessage() {
       addMessage(data.results[0].text, 'bot');
       chatHistory.push({ role: 'user', content: text });
       chatHistory.push({ role: 'assistant', content: data.results[0].text });
-    } else if (data.status === 'needs_brain') {
-      addMessage('⚠️ Beyin şu an yanıt veremiyor. Lütfen api anahtarlarınızı kontrol edin.', 'bot');
     } else {
-      addMessage('⚠️ Beklenmeyen bir hata oluştu.', 'bot');
+      addMessage('⚠️ Beyin yanıt vermedi: ' + (data.reason || 'Bilinmeyen hata'), 'bot');
     }
   } catch(e) {
     typingEl.remove();
-    addMessage('⚠️ Köprüye bağlanılamadı: ' + e.message, 'bot');
+    addMessage('⚠️ Köprüye bağlanılamadı. Köprüyü başlatın: node bridge-server.js', 'bot');
   }
 
   sendBtn.disabled = false;

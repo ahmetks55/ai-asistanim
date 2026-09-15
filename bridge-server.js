@@ -75,14 +75,17 @@ function serveFile(res, relPath, origin) {
 }
 
 // ===== NARAROUTER =====
+const NARA_DEFAULT_KEY = 'sk-nry-Sjg_ciKWNPY6IhrE47VA2VlMjSnNbkqN3J3hXfR32X4';
+const NARA_CHAT_URL = 'https://router.bynara.id/v1/chat/completions';
 function naraChat(task, context, key, cb) {
-  const k = key || config.naraKey || '';
-  if (!k) return cb(new Error('NaraRouter anahtarı yok'));
+  const k = key || config.naraKey || NARA_DEFAULT_KEY;
+  console.log('[NaraRouter] İstek gönderiliyor... Key:', k ? 'var (' + k.substring(0,10) + '...)' : 'YOK');
   const msgs = [];
   if (context) msgs.push({ role: 'system', content: context });
   msgs.push({ role: 'user', content: task });
   const body = JSON.stringify({ model: 'tencent-hy3-free', messages: msgs, max_tokens: 1024 });
-  const url = new URL('https://router.bynara.id/v1/chat/completions');
+  console.log('[NaraRouter] URL:', NARA_CHAT_URL);
+  const url = new URL(NARA_CHAT_URL);
   const req = https.request({
     hostname: url.hostname, port: 443, path: url.pathname, method: 'POST',
     headers: { 'Authorization': 'Bearer ' + k, 'Content-Type': 'application/json' },
@@ -91,15 +94,23 @@ function naraChat(task, context, key, cb) {
     let data = '';
     res.on('data', (c) => { data += c; });
     res.on('end', () => {
-      if (res.statusCode >= 400) return cb(new Error('Nara HTTP ' + res.statusCode));
+      console.log('[NaraRouter] Status:', res.statusCode);
+      if (res.statusCode >= 400) {
+        console.log('[NaraRouter] Hata detayı:', data.slice(0, 500));
+        return cb(new Error('Nara HTTP ' + res.statusCode + ': ' + data.slice(0, 200)));
+      }
       try {
         const j = JSON.parse(data);
         const text = (j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content) || '';
+        console.log('[NaraRouter] Başarılı, yanıt uzunluğu:', text.length);
         cb(null, text.trim() || null);
-      } catch(e) { cb(null, null); }
+      } catch(e) {
+        console.log('[NaraRouter] Parse hatası:', e.message);
+        cb(null, null);
+      }
     });
   });
-  req.on('error', (e) => cb(e));
+  req.on('error', (e) => { console.log('[NaraRouter] Bağlantı hatası:', e.message); cb(e); });
   req.on('timeout', () => req.destroy(new Error('timeout')));
   req.write(body);
   req.end();
@@ -214,6 +225,7 @@ function geminiChat(task, context, cb) {
 // ===== BEYNİ ÇALIŞTIR =====
 function runBrain(brain, task, context, keys, cb) {
   const ctx = context || 'Sen Türkçe konuşan yardımsever bir asistansın. Kısa ve net cevap ver.';
+  const naraKey = keys.naraKey || config.naraKey || NARA_DEFAULT_KEY;
 
   if (brain === 'nvidia') {
     nvidiaChat(task, ctx, keys.nvidiaKey, (err, text) => {
@@ -226,18 +238,10 @@ function runBrain(brain, task, context, keys, cb) {
       cb(err || new Error('Airforce yanıt vermedi'));
     });
   } else {
-    // Varsayılan: NaraRouter, başarısızsa fallback
-    naraChat(task, ctx, keys.naraKey, (err, text) => {
+    // NaraRouter
+    naraChat(task, ctx, naraKey, (err, text) => {
       if (!err && text) return cb(null, { status: 'done', plan: ['nara'], results: [{ type: 'brain', text }] });
-      // Fallback: NVIDIA varsa onu dene
-      if (keys.nvidiaKey) {
-        nvidiaChat(task, ctx, keys.nvidiaKey, (err2, text2) => {
-          if (!err2 && text2) return cb(null, { status: 'done', plan: ['nvidia'], results: [{ type: 'brain', text: text2 }] });
-          cb(new Error('Tüm beyinler yanıt vermedi'));
-        });
-      } else {
-        cb(new Error('NaraRouter ve fallback beyinler yanıt vermedi'));
-      }
+      cb(err || new Error('NaraRouter yanıt vermedi'));
     });
   }
 }
