@@ -61,7 +61,7 @@ async function callNara(task, context) {
   const r = await fetch('https://router.bynara.id/v1/chat/completions', {
     method: 'POST',
     headers: { 'Authorization': 'Bearer ' + naraKey, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ model: 'tencent-hy3-free', messages: msgs, max_tokens: 1024 })
+    body: JSON.stringify({ model: 'mimo-v2.5-free', messages: msgs, max_tokens: 1024 })
   });
   const d = await r.json();
   if (d.choices?.[0]?.message?.content) return d.choices[0].message.content;
