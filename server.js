@@ -85,7 +85,7 @@ const server = http.createServer((req, res) => {
         };
         const models = {
           nvidia: 'deepseek-ai/deepseek-v4-flash-0731',
-          nara: 'deepseek-v4-flash-free',
+          nara: 'mimo-v2.5-free',
           airforce: 'mimo-v2.5-pro'
         };
 
