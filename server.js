@@ -44,7 +44,14 @@ const ENDPOINTS = {
   groq: 'https://api.groq.com/openai/v1/chat/completions',
   cerebras: 'https://api.cerebras.ai/v1/chat/completions',
   zai: 'https://api.z.ai/api/paas/v4/chat/completions',
-  siliconflow: 'https://api.siliconflow.cn/v1/chat/completions'
+  siliconflow: 'https://api.siliconflow.cn/v1/chat/completions',
+  google: 'https://generativelanguage.googleapis.com/v1beta/openai/',
+  mistral: 'https://api.mistral.ai/v1/chat/completions',
+  cohere: 'https://api.cohere.com/v2/chat',
+  deepseek: 'https://api.deepseek.com/v1/chat/completions',
+  openrouter: 'https://openrouter.ai/api/v1/chat/completions',
+  cloudflare: 'https://api.cloudflare.com/client/v4/accounts/ACCOUNT_ID/ai/v1/chat/completions',
+  scaleway: 'https://api.scaleway.ai/v1/chat/completions'
 };
 
 function huggingFaceVideo(prompt, model, apiKey, cb) {
@@ -129,7 +136,9 @@ const server = http.createServer((req, res) => {
     const k = loadKeys();
     return res.end(JSON.stringify({
       nvidia: !!k.nvidia, nara: !!k.nara, airforce: !!k.airforce, pollinations: !!k.pollinations, hf: !!k.hf,
-      groq: !!k.groq, cerebras: !!k.cerebras, zai: !!k.zai, siliconflow: !!k.siliconflow
+      groq: !!k.groq, cerebras: !!k.cerebras, zai: !!k.zai, siliconflow: !!k.siliconflow,
+      google: !!k.google, mistral: !!k.mistral, cohere: !!k.cohere, deepseek: !!k.deepseek,
+      openrouter: !!k.openrouter, cloudflare: !!k.cloudflare, scaleway: !!k.scaleway
     }));
   }
 

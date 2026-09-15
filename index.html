@@ -50,6 +50,36 @@
             <option value="siliconflow:deepseek-ai/deepseek-v3">DeepSeek V3</option>
             <option value="siliconflow:qwen/qwen3-8b">Qwen3 8B</option>
           </optgroup>
+          <optgroup label="Google Gemini (Ücretsiz)">
+            <option value="google:gemini-2.5-flash">Gemini 2.5 Flash</option>
+            <option value="google:gemini-2.0-flash">Gemini 2.0 Flash</option>
+            <option value="google:gemma-3-27b-it">Gemma 3 27B</option>
+          </optgroup>
+          <optgroup label="Mistral (Ücretsiz)">
+            <option value="mistral:mistral-small-latest">Mistral Small</option>
+            <option value="mistral:codestral-latest">Codestral</option>
+            <option value="mistral:devstral-small-latest">Devstral Small</option>
+          </optgroup>
+          <optgroup label="Cohere (Ücretsiz)">
+            <option value="cohere:command-a-03-2025">Command A</option>
+            <option value="cohere:command-r-plus-08-2024">Command R+</option>
+          </optgroup>
+          <optgroup label="DeepSeek (Ücretsiz Deneme)">
+            <option value="deepseek:deepseek-chat">DeepSeek V3</option>
+            <option value="deepseek:deepseek-reasoner">DeepSeek R1</option>
+          </optgroup>
+          <optgroup label="OpenRouter (Ücretsiz Modeller)">
+            <option value="openrouter:meta-llama/llama-3.1-8b-instruct:free">Llama 3.1 8B (Ücretsiz)</option>
+            <option value="openrouter:google/gemma-2-9b-it:free">Gemma 2 9B (Ücretsiz)</option>
+            <option value="openrouter:mistralai/mistral-7b-instruct:free">Mistral 7B (Ücretsiz)</option>
+          </optgroup>
+          <optgroup label="Cloudflare Workers AI (Ücretsiz)">
+            <option value="cloudflare:llama-3.3-70b-instruct-fp8">Llama 3.3 70B</option>
+            <option value="cloudflare:llama-3.1-8b-instruct-fp8">Llama 3.1 8B</option>
+          </optgroup>
+          <optgroup label="Scaleway (Ücretsiz)">
+            <option value="scaleway:llama-3.3-70b-instruct">Llama 3.3 70B</option>
+          </optgroup>
           <optgroup label="NVIDIA NIM">
             <option value="nvidia:deepseek-ai/deepseek-v4-flash-0731">DeepSeek V4 Flash</option>
           </optgroup>
@@ -166,6 +196,125 @@
               <button onclick="event.stopPropagation();saveKey('siliconflow')" class="save-btn">Kaydet</button>
             </div>
             <small id="siliconflowStatus" class="status-text"></small>
+          </div>
+        </div>
+
+        <div class="provider-card" onclick="toggleProvider('google')">
+          <div class="provider-header">
+            <span class="provider-icon">🔴</span>
+            <span class="provider-name">Google Gemini</span>
+            <span id="googleBadge" class="provider-badge">✗ Kayıtlı Değil</span>
+            <span class="provider-arrow">▼</span>
+          </div>
+          <div id="googlePanel" class="provider-panel">
+            <small class="provider-desc">Ücretsiz - Gemini 2.5/2.0 Flash</small>
+            <div class="key-row">
+              <input type="password" id="googleKey" placeholder="AIza...">
+              <button onclick="event.stopPropagation();saveKey('google')" class="save-btn">Kaydet</button>
+            </div>
+            <small id="googleStatus" class="status-text"></small>
+          </div>
+        </div>
+
+        <div class="provider-card" onclick="toggleProvider('mistral')">
+          <div class="provider-header">
+            <span class="provider-icon">🟠</span>
+            <span class="provider-name">Mistral</span>
+            <span id="mistralBadge" class="provider-badge">✗ Kayıtlı Değil</span>
+            <span class="provider-arrow">▼</span>
+          </div>
+          <div id="mistralPanel" class="provider-panel">
+            <small class="provider-desc">Ücretsiz - Mistral Small, Codestral, Devstral</small>
+            <div class="key-row">
+              <input type="password" id="mistralKey" placeholder="API Key...">
+              <button onclick="event.stopPropagation();saveKey('mistral')" class="save-btn">Kaydet</button>
+            </div>
+            <small id="mistralStatus" class="status-text"></small>
+          </div>
+        </div>
+
+        <div class="provider-card" onclick="toggleProvider('cohere')">
+          <div class="provider-header">
+            <span class="provider-icon">🔷</span>
+            <span class="provider-name">Cohere</span>
+            <span id="cohereBadge" class="provider-badge">✗ Kayıtlı Değil</span>
+            <span class="provider-arrow">▼</span>
+          </div>
+          <div id="coherePanel" class="provider-panel">
+            <small class="provider-desc">Ücretsiz - Command A, Command R+</small>
+            <div class="key-row">
+              <input type="password" id="cohereKey" placeholder="API Key...">
+              <button onclick="event.stopPropagation();saveKey('cohere')" class="save-btn">Kaydet</button>
+            </div>
+            <small id="cohereStatus" class="status-text"></small>
+          </div>
+        </div>
+
+        <div class="provider-card" onclick="toggleProvider('deepseek')">
+          <div class="provider-header">
+            <span class="provider-icon">🐋</span>
+            <span class="provider-name">DeepSeek</span>
+            <span id="deepseekBadge" class="provider-badge">✗ Kayıtlı Değil</span>
+            <span class="provider-arrow">▼</span>
+          </div>
+          <div id="deepseekPanel" class="provider-panel">
+            <small class="provider-desc">5M token ücretsiz deneme - DeepSeek V3, R1</small>
+            <div class="key-row">
+              <input type="password" id="deepseekKey" placeholder="sk-...">
+              <button onclick="event.stopPropagation();saveKey('deepseek')" class="save-btn">Kaydet</button>
+            </div>
+            <small id="deepseekStatus" class="status-text"></small>
+          </div>
+        </div>
+
+        <div class="provider-card" onclick="toggleProvider('openrouter')">
+          <div class="provider-header">
+            <span class="provider-icon">🔀</span>
+            <span class="provider-name">OpenRouter</span>
+            <span id="openrouterBadge" class="provider-badge">✗ Kayıtlı Değil</span>
+            <span class="provider-arrow">▼</span>
+          </div>
+          <div id="openrouterPanel" class="provider-panel">
+            <small class="provider-desc">Ücretsiz :free modelleri - Llama, Gemma, Mistral</small>
+            <div class="key-row">
+              <input type="password" id="openrouterKey" placeholder="sk-or-...">
+              <button onclick="event.stopPropagation();saveKey('openrouter')" class="save-btn">Kaydet</button>
+            </div>
+            <small id="openrouterStatus" class="status-text"></small>
+          </div>
+        </div>
+
+        <div class="provider-card" onclick="toggleProvider('cloudflare')">
+          <div class="provider-header">
+            <span class="provider-icon">☁️</span>
+            <span class="provider-name">Cloudflare Workers AI</span>
+            <span id="cloudflareBadge" class="provider-badge">✗ Kayıtlı Değil</span>
+            <span class="provider-arrow">▼</span>
+          </div>
+          <div id="cloudflarePanel" class="provider-panel">
+            <small class="provider-desc">Günde 10K Neuron ücretsiz - Llama, Qwen</small>
+            <div class="key-row">
+              <input type="password" id="cloudflareKey" placeholder="API Token...">
+              <button onclick="event.stopPropagation();saveKey('cloudflare')" class="save-btn">Kaydet</button>
+            </div>
+            <small id="cloudflareStatus" class="status-text"></small>
+          </div>
+        </div>
+
+        <div class="provider-card" onclick="toggleProvider('scaleway')">
+          <div class="provider-header">
+            <span class="provider-icon">🇫🇷</span>
+            <span class="provider-name">Scaleway</span>
+            <span id="scalewayBadge" class="provider-badge">✗ Kayıtlı Değil</span>
+            <span class="provider-arrow">▼</span>
+          </div>
+          <div id="scalewayPanel" class="provider-panel">
+            <small class="provider-desc">1M token ücretsiz - Llama modelleri</small>
+            <div class="key-row">
+              <input type="password" id="scalewayKey" placeholder="API Key...">
+              <button onclick="event.stopPropagation();saveKey('scaleway')" class="save-btn">Kaydet</button>
+            </div>
+            <small id="scalewayStatus" class="status-text"></small>
           </div>
         </div>
 

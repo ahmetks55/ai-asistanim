@@ -93,6 +93,13 @@ fetch(API + '/keys').then(r => r.json()).then(d => {
   document.getElementById('cerebrasKey').value = d.cerebras ? '••••••••' : '';
   document.getElementById('zaiKey').value = d.zai ? '••••••••' : '';
   document.getElementById('siliconflowKey').value = d.siliconflow ? '••••••••' : '';
+  document.getElementById('googleKey').value = d.google ? '••••••••' : '';
+  document.getElementById('mistralKey').value = d.mistral ? '••••••••' : '';
+  document.getElementById('cohereKey').value = d.cohere ? '••••••••' : '';
+  document.getElementById('deepseekKey').value = d.deepseek ? '••••••••' : '';
+  document.getElementById('openrouterKey').value = d.openrouter ? '••••••••' : '';
+  document.getElementById('cloudflareKey').value = d.cloudflare ? '••••••••' : '';
+  document.getElementById('scalewayKey').value = d.scaleway ? '••••••••' : '';
   updateBadge('nara', d.nara);
   updateBadge('nvidia', d.nvidia);
   updateBadge('airforce', d.airforce);
@@ -102,6 +109,13 @@ fetch(API + '/keys').then(r => r.json()).then(d => {
   updateBadge('cerebras', d.cerebras);
   updateBadge('zai', d.zai);
   updateBadge('siliconflow', d.siliconflow);
+  updateBadge('google', d.google);
+  updateBadge('mistral', d.mistral);
+  updateBadge('cohere', d.cohere);
+  updateBadge('deepseek', d.deepseek);
+  updateBadge('openrouter', d.openrouter);
+  updateBadge('cloudflare', d.cloudflare);
+  updateBadge('scaleway', d.scaleway);
 }).catch(() => {});
 
 function saveKey(who) {
