@@ -759,6 +759,12 @@ dropdownSelected.addEventListener('click', (e) => {
   e.stopPropagation();
   dropdownEl.classList.toggle('open');
   hideTooltip();
+  if (dropdownEl.classList.contains('open')) {
+    const rect = dropdownSelected.getBoundingClientRect();
+    dropdownList.style.left = rect.left + 'px';
+    dropdownList.style.bottom = (window.innerHeight - rect.top + 4) + 'px';
+    dropdownList.style.width = Math.max(rect.width, 360) + 'px';
+  }
 });
 
 // Dışarı tıklayınca kapat
