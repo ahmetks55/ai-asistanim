@@ -4,8 +4,18 @@ const messagesEl = document.getElementById('messages');
 const userInput = document.getElementById('userInput');
 const sendBtn = document.getElementById('sendBtn');
 const brainSelect = document.getElementById('brainSelect');
+const connStatus = document.getElementById('connStatus');
 
 let chatHistory = [];
+
+// Köprü durumu
+fetch(API + '/health').then(r => r.json()).then(() => {
+  connStatus.textContent = '🟢 Köprü aktif';
+  connStatus.className = 'conn-status ok';
+}).catch(() => {
+  connStatus.textContent = '🔴 Köprü kapalı (node server.js)';
+  connStatus.className = 'conn-status error';
+});
 
 // Settings
 document.getElementById('settingsBtn').onclick = () => document.getElementById('settingsModal').style.display = 'flex';
@@ -52,7 +62,8 @@ function addMessage(text, sender) {
 async function send() {
   const text = userInput.value.trim();
   if (!text) return;
-  const brain = brainSelect.value;
+  const val = brainSelect.value;
+  const [provider, model] = val.split(':');
 
   addMessage(text, 'user');
   userInput.value = '';
@@ -69,7 +80,7 @@ async function send() {
     const r = await fetch(API + '/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ brain, messages })
+      body: JSON.stringify({ provider, model, messages })
     });
     const d = await r.json();
     typing.remove();

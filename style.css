@@ -85,6 +85,21 @@ body {
   background: var(--border);
 }
 
+.conn-status {
+  font-size: 12px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: var(--surface2);
+}
+
+.conn-status.ok {
+  color: #22c55e;
+}
+
+.conn-status.error {
+  color: #ef4444;
+}
+
 /* Chat Area */
 .chat-area {
   flex: 1;
@@ -127,9 +142,23 @@ body {
 
 /* Input Area */
 .input-area {
-  padding: 16px 20px;
+  padding: 12px 20px 16px;
   background: var(--surface);
   border-top: 1px solid var(--border);
+}
+
+.model-bar {
+  margin-bottom: 10px;
+}
+
+.model-bar .brain-select {
+  width: 100%;
+  padding: 8px 12px;
+  background: var(--surface2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 13px;
 }
 
 .input-row {

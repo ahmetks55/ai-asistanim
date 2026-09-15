@@ -11,11 +11,7 @@
     <header class="header">
       <div class="logo">🤖 AI Asistanım</div>
       <div class="header-actions">
-        <select id="brainSelect" class="brain-select">
-          <option value="nara">NaraRouter (Mimo)</option>
-          <option value="nvidia">NVIDIA NIM</option>
-          <option value="airforce">Airforce</option>
-        </select>
+        <span id="connStatus" class="conn-status">⚪ Köprü aranıyor...</span>
         <button id="settingsBtn" class="icon-btn" title="Ayarlar">⚙️</button>
       </div>
     </header>
@@ -23,12 +19,34 @@
     <main class="chat-area">
       <div id="messages" class="messages">
         <div class="message bot">
-          <div class="msg-content">Merhaba! Ben AI asistanınızım. Size nasıl yardımcı olabilirim?</div>
+          <div class="msg-content">Merhaba! Ben AI asistanınızım. Aşağıdaki açılır menüden model seçip mesajınızı yazın.</div>
         </div>
       </div>
     </main>
 
     <div class="input-area">
+      <div class="model-bar">
+        <select id="brainSelect" class="brain-select">
+          <optgroup label="NaraRouter">
+            <option value="nara:mimo-v2.5-free" selected>MiMo v2.5 Free</option>
+            <option value="nara:mimo-v2.5">MiMo v2.5</option>
+            <option value="nara:mimo-v2.5-pro">MiMo v2.5 Pro</option>
+            <option value="nara:deepseek-v4-flash-free">DeepSeek v4 Flash Free</option>
+            <option value="nara:deepseek-v4-flash">DeepSeek v4 Flash</option>
+            <option value="nara:deepseek-v4.1-flash-free">DeepSeek v4.1 Flash Free</option>
+            <option value="nara:qwen3.8-flash-free">Qwen 3.8 Flash Free</option>
+            <option value="nara:tencent-hy3-free">Hy3 Free</option>
+            <option value="nara:gpt-5.6-luna">GPT 5.6 Luna</option>
+            <option value="nara:agnes-2.5-flash">Agnes 2.5 Flash</option>
+          </optgroup>
+          <optgroup label="NVIDIA NIM">
+            <option value="nvidia:deepseek-ai/deepseek-v4-flash-0731">DeepSeek V4 Flash</option>
+          </optgroup>
+          <optgroup label="Airforce">
+            <option value="airforce:mimo-v2.5-pro">MiMo v2.5 Pro</option>
+          </optgroup>
+        </select>
+      </div>
       <div class="input-row">
         <textarea id="userInput" rows="1" placeholder="Mesajınızı yazın..."></textarea>
         <button id="sendBtn" class="send-btn">Gönder</button>
@@ -43,15 +61,6 @@
         <button id="closeSettings" class="close-btn">&times;</button>
       </div>
       <div class="modal-body">
-        <p class="modal-info">Key'leri sunucu tarafında saklanır. Köprü sunucusu (server.js) çalışırken ayarlanır.</p>
-        <div class="setting-group">
-          <label>NVIDIA NIM API Key</label>
-          <div class="key-row">
-            <input type="password" id="nvidiaKey" placeholder="nvapi-...">
-            <button onclick="saveKey('nvidia')" class="save-btn">Kaydet</button>
-          </div>
-          <small id="nvidiaStatus" class="status-text"></small>
-        </div>
         <div class="setting-group">
           <label>NaraRouter API Key</label>
           <div class="key-row">
@@ -59,6 +68,14 @@
             <button onclick="saveKey('nara')" class="save-btn">Kaydet</button>
           </div>
           <small id="naraStatus" class="status-text"></small>
+        </div>
+        <div class="setting-group">
+          <label>NVIDIA NIM API Key</label>
+          <div class="key-row">
+            <input type="password" id="nvidiaKey" placeholder="nvapi-...">
+            <button onclick="saveKey('nvidia')" class="save-btn">Kaydet</button>
+          </div>
+          <small id="nvidiaStatus" class="status-text"></small>
         </div>
         <div class="setting-group">
           <label>Airforce API Key</label>

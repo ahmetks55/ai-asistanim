@@ -37,6 +37,12 @@ function proxy(targetUrl, headers, body, cb) {
   req.end();
 }
 
+const ENDPOINTS = {
+  nvidia: 'https://integrate.api.nvidia.com/v1/chat/completions',
+  nara: 'https://router.bynara.id/v1/chat/completions',
+  airforce: 'https://api.airforce/v1/chat/completions'
+};
+
 const server = http.createServer((req, res) => {
   const origin = req.headers.origin;
   cors(res, origin);
@@ -75,27 +81,19 @@ const server = http.createServer((req, res) => {
       try {
         const p = JSON.parse(body);
         const keys = loadKeys();
-        const k = keys[p.brain] || '';
-        if (!k) return res.end(JSON.stringify({ error: p.brain + ' key yok' }));
+        const k = keys[p.provider] || '';
+        if (!k) return res.end(JSON.stringify({ error: p.provider + ' key yok. Ayarlardan girin.' }));
 
-        const urls = {
-          nvidia: 'https://integrate.api.nvidia.com/v1/chat/completions',
-          nara: 'https://router.bynara.id/v1/chat/completions',
-          airforce: 'https://api.airforce/v1/chat/completions'
-        };
-        const models = {
-          nvidia: 'deepseek-ai/deepseek-v4-flash-0731',
-          nara: 'mimo-v2.5-free',
-          airforce: 'mimo-v2.5-pro'
-        };
+        const url = ENDPOINTS[p.provider];
+        if (!url) return res.end(JSON.stringify({ error: 'Bilinmeyen provider: ' + p.provider }));
 
         const reqBody = JSON.stringify({
-          model: models[p.brain],
+          model: p.model,
           messages: p.messages,
           max_tokens: 1024
         });
 
-        proxy(urls[p.brain], { 'Authorization': 'Bearer ' + k }, reqBody, (err, data) => {
+        proxy(url, { 'Authorization': 'Bearer ' + k }, reqBody, (err, data) => {
           if (err) return res.end(JSON.stringify({ error: err.message }));
           try {
             const j = JSON.parse(data);
