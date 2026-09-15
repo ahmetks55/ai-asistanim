@@ -123,7 +123,7 @@ function nvidiaChat(task, context, key, cb) {
   const msgs = [];
   if (context) msgs.push({ role: 'system', content: context });
   msgs.push({ role: 'user', content: task });
-  const body = JSON.stringify({ model: 'deepseek-v4-flash-0731', messages: msgs, max_tokens: 1024 });
+  const body = JSON.stringify({ model: 'deepseek-ai/deepseek-v4-flash-0731', messages: msgs, max_tokens: 1024, temperature: 0.7, top_p: 0.95 });
   const req = https.request({
     hostname: 'integrate.api.nvidia.com',
     port: 443,
