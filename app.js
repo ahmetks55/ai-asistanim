@@ -83,7 +83,7 @@ async function checkAllStatus() {
       });
       if (r.ok) { nvidiaEl.textContent = '✓ Çalışıyor'; nvidiaEl.className = 'status-dot ok'; }
       else { nvidiaEl.textContent = '✗ Hata ' + r.status; nvidiaEl.className = 'status-dot error'; }
-    } catch(e) { nvidiaEl.textContent = '✗ Erişilemiyor'; nvidiaEl.className = 'status-dot error'; }
+    } catch(e) { nvidiaEl.textContent = '✗ CORS engellendi'; nvidiaEl.className = 'status-dot error'; }
   } else {
     nvidiaEl.textContent = '✗ Anahtar yok';
     nvidiaEl.className = 'status-dot error';
@@ -100,7 +100,7 @@ async function checkAllStatus() {
       });
       if (r.ok) { naraEl.textContent = '✓ Çalışıyor'; naraEl.className = 'status-dot ok'; }
       else { naraEl.textContent = '✗ Hata ' + r.status; naraEl.className = 'status-dot error'; }
-    } catch(e) { naraEl.textContent = '✗ Erişilemiyor'; naraEl.className = 'status-dot error'; }
+    } catch(e) { naraEl.textContent = '✗ CORS engellendi'; naraEl.className = 'status-dot error'; }
   } else {
     naraEl.textContent = '✗ Anahtar yok';
     naraEl.className = 'status-dot error';
@@ -117,7 +117,7 @@ async function checkAllStatus() {
       });
       if (r.ok) { airforceEl.textContent = '✓ Çalışıyor'; airforceEl.className = 'status-dot ok'; }
       else { airforceEl.textContent = '✗ Hata ' + r.status; airforceEl.className = 'status-dot error'; }
-    } catch(e) { airforceEl.textContent = '✗ Erişilemiyor'; airforceEl.className = 'status-dot error'; }
+    } catch(e) { airforceEl.textContent = '✗ CORS engellendi'; airforceEl.className = 'status-dot error'; }
   } else {
     airforceEl.textContent = '✗ Anahtar yok';
     airforceEl.className = 'status-dot error';
