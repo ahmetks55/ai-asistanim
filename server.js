@@ -67,6 +67,23 @@ function pollinationsVideo(prompt, model, apiKey, cb) {
   req.end();
 }
 
+function pollinationsVideoStatus(jobId, apiKey, cb) {
+  const req = https.request({
+    hostname: 'gen.pollinations.ai', port: 443, path: '/v1/videos/generations/' + jobId, method: 'GET',
+    headers: {
+      'Authorization': 'Bearer ' + apiKey,
+      'Accept': 'application/json'
+    },
+    timeout: 30000
+  }, (res) => {
+    let data = '';
+    res.on('data', c => data += c);
+    res.on('end', () => cb(null, data));
+  });
+  req.on('error', e => cb(e));
+  req.end();
+}
+
 const server = http.createServer((req, res) => {
   const origin = req.headers.origin;
   cors(res, origin);
@@ -81,6 +98,29 @@ const server = http.createServer((req, res) => {
     return res.end(JSON.stringify({
       nvidia: !!k.nvidia, nara: !!k.nara, airforce: !!k.airforce, pollinations: !!k.pollinations
     }));
+  }
+
+  if (req.method === 'GET' && req.url.startsWith('/video-status')) {
+    const url = new URL(req.url, 'http://localhost');
+    const jobId = url.searchParams.get('job_id');
+    if (!jobId) return res.end(JSON.stringify({ error: 'job_id gerekli' }));
+    const keys = loadKeys();
+    const k = keys.pollinations || '';
+    if (!k) return res.end(JSON.stringify({ error: 'Pollinations key yok' }));
+    pollinationsVideoStatus(jobId, k, (err, data) => {
+      if (err) return res.end(JSON.stringify({ error: err.message }));
+      try {
+        const j = JSON.parse(data);
+        if (j.status === 'completed' || j.status === 'succeeded') {
+          res.end(JSON.stringify({ status: 'completed', video_url: j.video_url || j.output?.video_url }));
+        } else if (j.status === 'failed' || j.status === 'error') {
+          res.end(JSON.stringify({ status: 'failed', error: j.error || 'İşlem başarısız' }));
+        } else {
+          res.end(JSON.stringify({ status: j.status || 'processing' }));
+        }
+      } catch(e) { res.end(JSON.stringify({ status: 'processing' })); }
+    });
+    return;
   }
 
   if (req.method === 'POST' && req.url === '/save-key') {
