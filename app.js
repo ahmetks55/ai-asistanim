@@ -1,6 +1,5 @@
-// ===== AI ASİSTANIM - ANA UYGULAMA =====
+// ===== AI ASİSTANIM - ANA UYGULAMA (Doğrudan API) =====
 
-const API = 'http://localhost:8788';
 const messagesEl = document.getElementById('messages');
 const userInput = document.getElementById('userInput');
 const sendBtn = document.getElementById('sendBtn');
@@ -29,7 +28,6 @@ document.querySelectorAll('.brain-btn').forEach(btn => {
     localStorage.setItem('activeBrain', activeBrain);
   });
 });
-// Sayfa yüklenince seçili beyini aktifleştir
 document.querySelector(`.brain-btn[data-brain="${activeBrain}"]`)?.classList.add('active');
 document.querySelectorAll('.brain-btn:not([data-brain="' + activeBrain + '"])').forEach(b => b.classList.remove('active'));
 
@@ -41,7 +39,6 @@ document.getElementById('nvidiaKeySave').addEventListener('click', () => {
   localStorage.setItem('nvidia_api_key', v);
   document.getElementById('nvidiaKeyStatus').textContent = '✓ Kaydedildi';
   document.getElementById('nvidiaKeyStatus').className = 'key-status ok';
-  saveToServer('nvidia', v);
 });
 
 document.getElementById('airforceKeySave').addEventListener('click', () => {
@@ -51,7 +48,6 @@ document.getElementById('airforceKeySave').addEventListener('click', () => {
   localStorage.setItem('airforce_api_key', v);
   document.getElementById('airforceKeyStatus').textContent = '✓ Kaydedildi';
   document.getElementById('airforceKeyStatus').className = 'key-status ok';
-  saveToServer('airforce', v);
 });
 
 document.getElementById('naraKeySave').addEventListener('click', () => {
@@ -61,7 +57,6 @@ document.getElementById('naraKeySave').addEventListener('click', () => {
   localStorage.setItem('nara_api_key', v);
   document.getElementById('naraKeyStatus').textContent = '✓ Kaydedildi';
   document.getElementById('naraKeyStatus').className = 'key-status ok';
-  saveToServer('nara', v);
 });
 
 // Sayfa yüklenince kayıtlı key'leri inputlara doldur
@@ -69,46 +64,67 @@ document.getElementById('nvidiaKeyInput').value = nvidiaKey;
 document.getElementById('airforceKeyInput').value = airforceKey;
 document.getElementById('naraKeyInput').value = naraKey;
 
-function saveToServer(provider, key) {
-  fetch(API + '/save-key', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ provider, key })
-  }).catch(e => console.log('Key kaydetme hatası:', e.message));
-}
-
 // ===== DURUM KONTROLÜ =====
 document.getElementById('checkAllStatus').addEventListener('click', checkAllStatus);
 
 async function checkAllStatus() {
-  // Köprü
-  const bridgeEl = document.getElementById('bridgeStatus');
-  bridgeEl.textContent = 'Kontrol...';
-  bridgeEl.className = 'status-dot checking';
-  try {
-    const r = await fetch(API + '/health', { signal: AbortSignal.timeout(3000) });
-    if (r.ok) { bridgeEl.textContent = '✓ Bağlı'; bridgeEl.className = 'status-dot ok'; }
-    else { bridgeEl.textContent = '✗ Hata'; bridgeEl.className = 'status-dot error'; }
-  } catch(e) { bridgeEl.textContent = '✗ Bağlantı yok'; bridgeEl.className = 'status-dot error'; }
-
-  // NaraRouter
-  const naraEl = document.getElementById('naraStatus');
-  naraEl.textContent = naraKey ? '✓ Anahtar var' : '✗ Anahtar yok';
-  naraEl.className = naraKey ? 'status-dot ok' : 'status-dot error';
-
-  // NVIDIA
   const nvidiaEl = document.getElementById('nvidiaStatus');
-  nvidiaEl.textContent = nvidiaKey ? '✓ Anahtar var' : '✗ Anahtar yok';
-  nvidiaEl.className = nvidiaKey ? 'status-dot ok' : 'status-dot error';
-
-  // Airforce
+  const naraEl = document.getElementById('naraStatus');
   const airforceEl = document.getElementById('airforceStatus');
-  airforceEl.textContent = airforceKey ? '✓ Anahtar var' : '✗ Anahtar yok';
-  airforceEl.className = airforceKey ? 'status-dot ok' : 'status-dot error';
 
-  // Köprü durumunu header'da göster
-  localStatus.textContent = bridgeEl.className.includes('ok') ? '✓ Köprü aktif' : '✗ Köprü kapalı';
-  localStatus.className = bridgeEl.className.includes('ok') ? 'status ok' : 'status error';
+  // NVIDIA test
+  if (nvidiaKey) {
+    nvidiaEl.textContent = 'Test ediliyor...';
+    nvidiaEl.className = 'status-dot checking';
+    try {
+      const r = await fetch('https://integrate.api.nvidia.com/v1/models', {
+        headers: { 'Authorization': 'Bearer ' + nvidiaKey },
+        signal: AbortSignal.timeout(10000)
+      });
+      if (r.ok) { nvidiaEl.textContent = '✓ Çalışıyor'; nvidiaEl.className = 'status-dot ok'; }
+      else { nvidiaEl.textContent = '✗ Hata ' + r.status; nvidiaEl.className = 'status-dot error'; }
+    } catch(e) { nvidiaEl.textContent = '✗ Erişilemiyor'; nvidiaEl.className = 'status-dot error'; }
+  } else {
+    nvidiaEl.textContent = '✗ Anahtar yok';
+    nvidiaEl.className = 'status-dot error';
+  }
+
+  // NaraRouter test
+  if (naraKey) {
+    naraEl.textContent = 'Test ediliyor...';
+    naraEl.className = 'status-dot checking';
+    try {
+      const r = await fetch('https://router.bynara.id/v1/models', {
+        headers: { 'Authorization': 'Bearer ' + naraKey },
+        signal: AbortSignal.timeout(10000)
+      });
+      if (r.ok) { naraEl.textContent = '✓ Çalışıyor'; naraEl.className = 'status-dot ok'; }
+      else { naraEl.textContent = '✗ Hata ' + r.status; naraEl.className = 'status-dot error'; }
+    } catch(e) { naraEl.textContent = '✗ Erişilemiyor'; naraEl.className = 'status-dot error'; }
+  } else {
+    naraEl.textContent = '✗ Anahtar yok';
+    naraEl.className = 'status-dot error';
+  }
+
+  // Airforce test
+  if (airforceKey) {
+    airforceEl.textContent = 'Test ediliyor...';
+    airforceEl.className = 'status-dot checking';
+    try {
+      const r = await fetch('https://api.airforce/v1/models', {
+        headers: { 'Authorization': 'Bearer ' + airforceKey },
+        signal: AbortSignal.timeout(10000)
+      });
+      if (r.ok) { airforceEl.textContent = '✓ Çalışıyor'; airforceEl.className = 'status-dot ok'; }
+      else { airforceEl.textContent = '✗ Hata ' + r.status; airforceEl.className = 'status-dot error'; }
+    } catch(e) { airforceEl.textContent = '✗ Erişilemiyor'; airforceEl.className = 'status-dot error'; }
+  } else {
+    airforceEl.textContent = '✗ Anahtar yok';
+    airforceEl.className = 'status-dot error';
+  }
+
+  localStatus.textContent = '✓ Doğrudan bağlantı';
+  localStatus.className = 'status ok';
 }
 
 // Sayfa yüklenince durum kontrolü yap
@@ -133,6 +149,49 @@ function scrollToBottom() {
   messagesEl.parentElement.scrollTo({ top: messagesEl.parentElement.scrollHeight, behavior: 'smooth' });
 }
 
+// ===== API ÇAĞRILARI =====
+async function callNvidia(task, context) {
+  const msgs = [];
+  if (context) msgs.push({ role: 'system', content: context });
+  msgs.push({ role: 'user', content: task });
+  const r = await fetch('https://integrate.api.nvidia.com/v1/chat/completions', {
+    method: 'POST',
+    headers: { 'Authorization': 'Bearer ' + nvidiaKey, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ model: 'deepseek-ai/deepseek-v4-flash-0731', messages: msgs, max_tokens: 1024, temperature: 0.7, top_p: 0.95 })
+  });
+  const d = await r.json();
+  if (d.choices && d.choices[0] && d.choices[0].message) return d.choices[0].message.content;
+  throw new Error(d.error?.message || 'NVIDIA yanıt vermedi');
+}
+
+async function callNara(task, context) {
+  const msgs = [];
+  if (context) msgs.push({ role: 'system', content: context });
+  msgs.push({ role: 'user', content: task });
+  const r = await fetch('https://router.bynara.id/v1/chat/completions', {
+    method: 'POST',
+    headers: { 'Authorization': 'Bearer ' + naraKey, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ model: 'tencent-hy3-free', messages: msgs, max_tokens: 1024 })
+  });
+  const d = await r.json();
+  if (d.choices && d.choices[0] && d.choices[0].message) return d.choices[0].message.content;
+  throw new Error(d.error?.message || 'NaraRouter yanıt vermedi');
+}
+
+async function callAirforce(task, context) {
+  const msgs = [];
+  if (context) msgs.push({ role: 'system', content: context });
+  msgs.push({ role: 'user', content: task });
+  const r = await fetch('https://api.airforce/v1/chat/completions', {
+    method: 'POST',
+    headers: { 'Authorization': 'Bearer ' + airforceKey, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ model: 'mimo-v2.5-pro', messages: msgs, max_tokens: 1024 })
+  });
+  const d = await r.json();
+  if (d.choices && d.choices[0] && d.choices[0].message) return d.choices[0].message.content;
+  throw new Error(d.error?.message || 'Airforce yanıt vermedi');
+}
+
 async function sendMessage() {
   const text = userInput.value.trim();
   if (!text) return;
@@ -144,33 +203,27 @@ async function sendMessage() {
   const typingEl = addMessage('Asistan çalışıyor...', 'bot');
   typingEl.classList.add('typing');
 
+  const context = chatHistory.map(m => m.role + ': ' + m.content).join('\n');
+
   try {
-    const res = await fetch(API + '/brain', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        task: text,
-        context: chatHistory.map(m => m.role + ': ' + m.content).join('\n'),
-        brain: activeBrain,
-        nvidiaKey: nvidiaKey,
-        airforceKey: airforceKey,
-        naraKey: naraKey
-      })
-    });
-
-    const data = await res.json();
-    typingEl.remove();
-
-    if (data.status === 'done' && data.results && data.results[0] && data.results[0].text) {
-      addMessage(data.results[0].text, 'bot');
-      chatHistory.push({ role: 'user', content: text });
-      chatHistory.push({ role: 'assistant', content: data.results[0].text });
+    let reply;
+    if (activeBrain === 'nvidia') {
+      if (!nvidiaKey) throw new Error('NVIDIA API key girilmemiş. Ayarlardan key girin.');
+      reply = await callNvidia(text, context);
+    } else if (activeBrain === 'airforce') {
+      if (!airforceKey) throw new Error('Airforce API key girilmemiş. Ayarlardan key girin.');
+      reply = await callAirforce(text, context);
     } else {
-      addMessage('⚠️ Beyin yanıt vermedi: ' + (data.reason || 'Bilinmeyen hata'), 'bot');
+      if (!naraKey) throw new Error('NaraRouter API key girilmemiş. Ayarlardan key girin.');
+      reply = await callNara(text, context);
     }
+    typingEl.remove();
+    addMessage(reply, 'bot');
+    chatHistory.push({ role: 'user', content: text });
+    chatHistory.push({ role: 'assistant', content: reply });
   } catch(e) {
     typingEl.remove();
-    addMessage('⚠️ Köprüye bağlanılamadı. Köprüyü başlatın: node bridge-server.js', 'bot');
+    addMessage('⚠️ Hata: ' + e.message, 'bot');
   }
 
   sendBtn.disabled = false;
