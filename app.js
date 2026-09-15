@@ -705,8 +705,8 @@ function initDropdown() {
       const priceClass = m.price === 'ucretsiz' ? 'price-free' : m.price === 'deneme' ? 'price-trial' : 'price-paid';
       const priceText = m.price === 'ucretsiz' ? 'Ücretsiz' : m.price === 'deneme' ? 'Deneme' : 'Ücretli';
       const ratingClass = m.rating >= 8 ? 'rating-high' : m.rating >= 6 ? 'rating-mid' : 'rating-low';
-      const isActive = key === selectedModel ? ' active' : '';
-      html += '<div class="dropdown-option' + isActive + '" data-key="' + key + '">'
+      const isActive = m.key === selectedModel ? ' active' : '';
+      html += '<div class="dropdown-option' + isActive + '" data-key="' + m.key + '">'
         + '<span class="option-name">' + m.name + '</span>'
         + '<span class="option-rating ' + ratingClass + '">' + m.rating + '/10</span>'
         + '<span class="option-price ' + priceClass + '">' + priceText + '</span>'
