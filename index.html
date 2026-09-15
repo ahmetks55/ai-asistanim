@@ -48,6 +48,8 @@
             <option value="video:bytedance/seedance-2.0">🎬 Seedance 2.0</option>
             <option value="video:x-ai/grok-imagine-video">🎬 Grok Video</option>
             <option value="video:google/veo-3.1-fast">🎬 Veo 3.1 Fast</option>
+            <option value="hfvideo:tencent/HunyuanVideo">🎬 HunyuanVideo (HF)</option>
+            <option value="hfvideo:Lightricks/LTX-Video-0.9.8-13B-distilled">🎬 LTX Video (HF)</option>
           </optgroup>
         </select>
       </div>
@@ -96,6 +98,14 @@
             <button onclick="saveKey('pollinations')" class="save-btn">Kaydet</button>
           </div>
           <small id="pollinationsStatus" class="status-text"></small>
+        </div>
+        <div class="setting-group">
+          <label>Hugging Face API Key (Ücretsiz Video)</label>
+          <div class="key-row">
+            <input type="password" id="hfKey" placeholder="hf_...">
+            <button onclick="saveKey('hf')" class="save-btn">Kaydet</button>
+          </div>
+          <small id="hfStatus" class="status-text"></small>
         </div>
       </div>
     </div>

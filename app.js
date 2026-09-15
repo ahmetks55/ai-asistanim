@@ -73,6 +73,7 @@ fetch(API + '/keys').then(r => r.json()).then(d => {
   document.getElementById('naraKey').value = d.nara ? '••••••••' : '';
   document.getElementById('airforceKey').value = d.airforce ? '••••••••' : '';
   document.getElementById('pollinationsKey').value = d.pollinations ? '••••••••' : '';
+  document.getElementById('hfKey').value = d.hf ? '••••••••' : '';
 }).catch(() => {});
 
 function saveKey(who) {
@@ -136,10 +137,11 @@ async function send() {
       messagesEl.parentElement.scrollTop = messagesEl.parentElement.scrollHeight;
       chatHistory.push({ role: 'user', content: text });
       chatHistory.push({ role: 'assistant', content: 'Görsel üretildi: ' + text });
-    } else if (provider === 'video') {
-      // Pollinations video generation
+    } else if (provider === 'video' || provider === 'hfvideo') {
+      // Video generation
       typing.remove();
-      addMessage('🎬 Video oluşturuluyor... Bu işlem 1-2 dakika sürebilir.', 'bot');
+      notifySound();
+      addMessage('🎬 Video oluşturuluyor... Hazır olunca burada oynatılacak.', 'bot');
       const r = await fetch(API + '/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -147,41 +149,41 @@ async function send() {
       });
       const d = await r.json();
       if (d.video) {
+        notifySound();
         const vidDiv = document.createElement('div');
         vidDiv.className = 'message bot';
-        vidDiv.innerHTML = '<video src="' + d.video + '" controls style="max-width:100%;border-radius:12px;"></video>';
+        vidDiv.innerHTML = '<video src="' + d.video + '" controls autoplay style="max-width:100%;border-radius:12px;"></video>';
         messagesEl.appendChild(vidDiv);
         messagesEl.parentElement.scrollTop = messagesEl.parentElement.scrollHeight;
         chatHistory.push({ role: 'user', content: text });
         chatHistory.push({ role: 'assistant', content: 'Video üretildi: ' + text });
       } else if (d.job_id) {
-        // Async job - poll for result
         const statusMsg = addMessage('Video işleniyor... Lütfen bekleyin.', 'bot');
         let attempts = 0;
         const poll = async () => {
           attempts++;
           if (attempts > 60) {
-            statusMsg.innerHTML = '<div class="msg-content">Video işleniyor ama çok uzun sürdü. <a href="https://pollinations.ai" target="_blank">Pollinations</a> dashboardundan kontrol edin.</div>';
+            errorSound();
+            statusMsg.innerHTML = '<div class="msg-content">Video çok uzun sürdü. Kontrol edin.</div>';
             return;
           }
           try {
             const pr = await fetch(API + '/video-status?job_id=' + d.job_id);
             const pd = await pr.json();
             if (pd.status === 'completed' && pd.video_url) {
-              statusMsg.innerHTML = '<video src="' + pd.video_url + '" controls style="max-width:100%;border-radius:12px;"></video>';
-              chatHistory.push({ role: 'user', content: text });
-              chatHistory.push({ role: 'assistant', content: 'Video üretildi: ' + text });
+              notifySound();
+              statusMsg.innerHTML = '<video src="' + pd.video_url + '" controls autoplay style="max-width:100%;border-radius:12px;"></video>';
             } else if (pd.status === 'failed') {
-              statusMsg.innerHTML = '<div class="msg-content">Video oluşturulamadı: ' + (pd.error || 'Bilinmeyen hata') + '</div>';
+              errorSound();
+              statusMsg.innerHTML = '<div class="msg-content">Hata: ' + (pd.error || 'Başarısız') + '</div>';
             } else {
               setTimeout(poll, 3000);
             }
-          } catch(e) {
-            setTimeout(poll, 3000);
-          }
+          } catch(e) { setTimeout(poll, 3000); }
         };
         poll();
       } else {
+        errorSound();
         addMessage('Hata: ' + (d.error || 'Video oluşturulamadı'), 'bot');
       }
     } else {

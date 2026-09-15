@@ -43,6 +43,34 @@ const ENDPOINTS = {
   airforce: 'https://api.airforce/v1/chat/completions'
 };
 
+function huggingFaceVideo(prompt, model, apiKey, cb) {
+  const body = JSON.stringify({ inputs: prompt });
+  const req = https.request({
+    hostname: 'router.huggingface.co', port: 443, path: '/hf-inference/models/' + model, method: 'POST',
+    headers: {
+      'Authorization': 'Bearer ' + apiKey,
+      'Content-Type': 'application/json',
+      'Content-Length': Buffer.byteLength(body)
+    },
+    timeout: 120000
+  }, (res) => {
+    let data = '';
+    res.on('data', c => data += c);
+    res.on('end', () => {
+      if (res.statusCode === 200 && res.headers['content-type']?.startsWith('video/')) {
+        const base64 = Buffer.from(data, 'binary').toString('base64');
+        cb(null, JSON.stringify({ video: 'data:video/mp4;base64,' + base64 }));
+      } else {
+        cb(null, data);
+      }
+    });
+  });
+  req.on('error', e => cb(e));
+  req.on('timeout', () => { req.destroy(); cb(new Error('timeout')); });
+  req.write(body);
+  req.end();
+}
+
 function pollinationsVideo(prompt, model, apiKey, cb) {
   const body = JSON.stringify({
     model: model,
@@ -96,7 +124,7 @@ const server = http.createServer((req, res) => {
   if (req.method === 'GET' && req.url === '/keys') {
     const k = loadKeys();
     return res.end(JSON.stringify({
-      nvidia: !!k.nvidia, nara: !!k.nara, airforce: !!k.airforce, pollinations: !!k.pollinations
+      nvidia: !!k.nvidia, nara: !!k.nara, airforce: !!k.airforce, pollinations: !!k.pollinations, hf: !!k.hf
     }));
   }
 
@@ -157,10 +185,27 @@ const server = http.createServer((req, res) => {
               if (j.video_url || j.url) {
                 res.end(JSON.stringify({ video: j.video_url || j.url }));
               } else if (j.id) {
-                // Async job - poll for result
                 res.end(JSON.stringify({ job_id: j.id, status: 'processing' }));
               } else {
                 res.end(JSON.stringify({ error: j.error?.message || 'Video oluşturulamadı' }));
+              }
+            } catch(e) { res.end(JSON.stringify({ error: 'Parse hatası' })); }
+          });
+          return;
+        }
+
+        // Video generation via Hugging Face
+        if (p.provider === 'hfvideo') {
+          const k = keys.hf || '';
+          if (!k) return res.end(JSON.stringify({ error: 'Hugging Face key yok. Ayarlardan girin.' }));
+          huggingFaceVideo(p.messages[p.messages.length - 1].content, p.model, k, (err, data) => {
+            if (err) return res.end(JSON.stringify({ error: err.message }));
+            try {
+              const j = JSON.parse(data);
+              if (j.video) {
+                res.end(JSON.stringify({ video: j.video }));
+              } else {
+                res.end(JSON.stringify({ error: j.error || j.message || 'Video oluşturulamadı' }));
               }
             } catch(e) { res.end(JSON.stringify({ error: 'Parse hatası' })); }
           });
