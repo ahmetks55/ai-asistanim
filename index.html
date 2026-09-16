@@ -33,7 +33,12 @@
             <span class="selected-provider">NaraRouter</span>
             <span class="dropdown-arrow">▼</span>
           </button>
-          <div class="dropdown-list" id="dropdownList"></div>
+          <div class="dropdown-list" id="dropdownList">
+            <div class="dropdown-search">
+              <input type="text" id="modelSearch" placeholder="Model ara (puan, yetenek...)" oninput="filterModels(this.value)">
+            </div>
+            <div id="modelOptions"></div>
+          </div>
         </div>
         <div class="model-tooltip" id="modelTooltip"></div>
       </div>

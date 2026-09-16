@@ -6,7 +6,7 @@ const sendBtn = document.getElementById('sendBtn');
 const connStatus = document.getElementById('connStatus');
 
 let chatHistory = [];
-let selectedModel = 'nara:agnes-2.5-flash';
+let selectedModel = localStorage.getItem('selectedModel') || 'nara:agnes-2.5-flash';
 
 // ===== SAĞLAYICI BİLGİ VERİTABANI =====
 const PROVIDERS = {
@@ -1223,71 +1223,84 @@ const selectedText = dropdownSelected.querySelector('.selected-text');
 const selectedProvider = dropdownSelected.querySelector('.selected-provider');
 
 function initDropdown() {
-  // Gruplara ayır
-  const groups = {};
-  const groupOrder = [];
-  Object.entries(MODEL_DB).forEach(([key, m]) => {
-    if (!groups[m.provider]) { groups[m.provider] = []; groupOrder.push(m.provider); }
-    groups[m.provider].push({ key, ...m });
-  });
-
-  // Her grup için HTML oluştur
-  let html = '';
-  groupOrder.forEach(provider => {
-    const models = groups[provider];
-    html += '<div class="dropdown-group-label">' + provider + '</div>';
-    models.forEach(m => {
-      const priceClass = m.price === 'ucretsiz' ? 'price-free' : m.price === 'deneme' ? 'price-trial' : 'price-paid';
-      const priceText = m.price === 'ucretsiz' ? 'Ücretsiz' : m.price === 'deneme' ? 'Deneme' : 'Ücretli';
-      const ratingClass = m.rating >= 8 ? 'rating-high' : m.rating >= 6 ? 'rating-mid' : 'rating-low';
-      const isActive = m.key === selectedModel ? ' active' : '';
-      html += '<div class="dropdown-option' + isActive + '" data-key="' + m.key + '">'
-        + '<span class="option-name">' + m.name + '</span>'
-        + '<span class="option-rating ' + ratingClass + '">' + m.rating + '/10</span>'
-        + '<span class="option-price ' + priceClass + '">' + priceText + '</span>'
-        + '</div>';
-    });
-  });
-  dropdownList.innerHTML = html;
-
+  const optionsContainer = document.getElementById('modelOptions') || dropdownList;
+  
   // Seçili modeli göster
   updateSelectedDisplay();
 
-  // Tıklama olayları
-  dropdownList.querySelectorAll('.dropdown-option').forEach(opt => {
-    opt.addEventListener('click', () => {
-      selectedModel = opt.dataset.key;
-      updateSelectedDisplay();
-      dropdownEl.classList.remove('open');
-      hideTooltip();
-      // Aktif sınıfını güncelle
-      dropdownList.querySelectorAll('.dropdown-option').forEach(o => o.classList.remove('active'));
-      opt.classList.add('active');
-    });
+  let html = '';
+  Object.entries(MODEL_DB).forEach(([key, m]) => {
+    const p = PROVIDERS[m.provider] || { name: 'Bilinmiyor', icon: '❓' };
+    const priceClass = m.price === 'ucretsiz' ? 'price-free' : m.price === 'deneme' ? 'price-trial' : 'price-paid';
+    const priceText = m.price === 'ucretsiz' ? 'Ücretsiz' : m.price === 'deneme' ? 'Deneme' : 'Ücretli';
+    const ratingClass = m.rating >= 8 ? 'rating-high' : m.rating >= 6 ? 'rating-mid' : 'rating-low';
+    const isActive = m.key === selectedModel ? ' active' : '';
+    
+    html += `<div class="model-option${isActive}" data-key="${key}" onclick="selectModel('${key}')">
+      <span class="opt-icon">${p.icon}</span>
+      <div class="opt-info">
+        <span class="opt-name">${m.name}</span>
+        <span class="opt-meta">${m.provider} • ⭐${m.rating}/10</span>
+      </div>
+      <span class="opt-badge">${m.caps[0] || 'Genel'}</span>
+    </div>`;
+  });
+  
+  // Eğer modelOptions varsa oraya, yoksa dropdownList'e ekle
+  if (optionsContainer === dropdownList) {
+    // Arama kutusunu koru
+    const searchHtml = dropdownList.querySelector('.dropdown-search')?.outerHTML || '';
+    dropdownList.innerHTML = searchHtml + '<div id="modelOptions">' + html + '</div>';
+  } else {
+    optionsContainer.innerHTML = html;
+  }
 
-    // Hover tooltip
+  // Tıklama olaylarını ata
+  document.querySelectorAll('.model-option').forEach(opt => {
     opt.addEventListener('mouseenter', (e) => {
       const key = opt.dataset.key;
       const m = MODEL_DB[key];
-      if (!m) return;
-      showTooltip(m, e);
+      if (m) showTooltip(m, e);
     });
-    opt.addEventListener('mousemove', (e) => {
-      moveTooltip(e);
-    });
-    opt.addEventListener('mouseleave', () => {
-      hideTooltip();
-    });
+    opt.addEventListener('mousemove', moveTooltip);
+    opt.addEventListener('mouseleave', hideTooltip);
   });
 }
 
-function updateSelectedDisplay() {
-  const m = MODEL_DB[selectedModel];
-  if (m) {
-    selectedText.textContent = m.name;
-    selectedProvider.textContent = m.provider;
-  }
-}
+// Model seçimi ve hafızaya kayıt
+window.selectModel = function(id) {
+  selectedModel = id;
+  localStorage.setItem('selectedModel', id);
+  updateSelectedDisplay();
+  dropdownEl.classList.remove('open');
+  hideTooltip();
+  
+  document.querySelectorAll('.model-option').forEach(o => o.classList.remove('active'));
+  const activeOpt = document.querySelector(`.model-option[data-key="${id}"]`);
+  if (activeOpt) activeOpt.classList.add('active');
+};
+
+// Model filtreleme (İsim, Puan, Yetenek)
+window.filterModels = function(q) {
+  const query = q.toLowerCase();
+  const options = document.querySelectorAll('.model-option');
+  
+  options.forEach(opt => {
+    const id = opt.dataset.key;
+    const m = MODEL_DB[id];
+    if (!m) return;
+    const p = PROVIDERS[m.provider] || { name: '' };
+    
+    const matchesName = m.name.toLowerCase().includes(query);
+    const matchesProvider = p.name.toLowerCase().includes(query);
+    const matchesCaps = m.caps.some(c => c.toLowerCase().includes(query));
+    const matchesRating = query.includes('puan') && m.rating.toString().includes(query.replace('puan', '').trim());
+    const matchesRatingDirect = !isNaN(query) && query !== '' && m.rating.toString() === query;
+
+    opt.style.display = (matchesName || matchesProvider || matchesCaps || matchesRating || matchesRatingDirect) ? '' : 'none';
+  });
+};
+
 
 // Dropdown aç/kapa
 dropdownSelected.addEventListener('click', (e) => {

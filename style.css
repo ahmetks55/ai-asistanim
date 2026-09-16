@@ -455,12 +455,28 @@ textarea::placeholder {
   border-radius: 3px;
 }
 
-video {
-  max-width: 100%;
-  border-radius: 12px;
-  margin-top: 8px;
+/* Model Dropdown Search */
+.dropdown-search {
+  padding: 8px;
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  background: var(--surface1);
+  z-index: 10;
 }
-
+.dropdown-search input {
+  width: 100%;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px 10px;
+  color: var(--text);
+  font-size: 12px;
+  outline: none;
+}
+.dropdown-search input:focus {
+  border-color: var(--primary);
+}
 /* Settings Info Box */
 .settings-info {
   display: flex; gap: 14px; align-items: flex-start;
