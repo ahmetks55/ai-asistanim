@@ -1316,6 +1316,7 @@ dropdownSelected.addEventListener('click', (e) => {
   dropdownEl.classList.toggle('open');
   hideTooltip();
   if (dropdownEl.classList.contains('open')) {
+    initDropdown(); // Dropdown açıldığında listeyi tazele (arama kutusunu koruyarak)
     const rect = dropdownSelected.getBoundingClientRect();
     dropdownList.style.left = rect.left + 'px';
     dropdownList.style.bottom = (window.innerHeight - rect.top + 4) + 'px';
