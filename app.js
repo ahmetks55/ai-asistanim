@@ -1225,38 +1225,43 @@ const selectedProvider = dropdownSelected.querySelector('.selected-provider');
 function initDropdown() {
   const optionsContainer = document.getElementById('modelOptions') || dropdownList;
   
-  // Seçili modeli göster
   updateSelectedDisplay();
 
-  let html = '';
+  // Gruplara ayır
+  const groups = {};
+  const groupOrder = [];
   Object.entries(MODEL_DB).forEach(([key, m]) => {
-    const p = PROVIDERS[m.provider] || { name: 'Bilinmiyor', icon: '❓' };
-    const priceClass = m.price === 'ucretsiz' ? 'price-free' : m.price === 'deneme' ? 'price-trial' : 'price-paid';
-    const priceText = m.price === 'ucretsiz' ? 'Ücretsiz' : m.price === 'deneme' ? 'Deneme' : 'Ücretli';
-    const ratingClass = m.rating >= 8 ? 'rating-high' : m.rating >= 6 ? 'rating-mid' : 'rating-low';
-    const isActive = m.key === selectedModel ? ' active' : '';
-    
-    html += `<div class="model-option${isActive}" data-key="${key}" onclick="selectModel('${key}')">
-      <span class="opt-icon">${p.icon}</span>
-      <div class="opt-info">
-        <span class="opt-name">${m.name}</span>
-        <span class="opt-meta">${m.provider} • ⭐${m.rating}/10</span>
-      </div>
-      <span class="opt-badge">${m.caps[0] || 'Genel'}</span>
-    </div>`;
+    if (!groups[m.provider]) { groups[m.provider] = []; groupOrder.push(m.provider); }
+    groups[m.provider].push({ key, ...m });
+  });
+
+  // HTML oluştur (Eski grup yapısıyla)
+  let html = '';
+  groupOrder.forEach(provider => {
+    const models = groups[provider];
+    html += `<div class="dropdown-group-label" data-provider="${provider}">${provider}</div>`;
+    models.forEach(m => {
+      const priceClass = m.price === 'ucretsiz' ? 'price-free' : m.price === 'deneme' ? 'price-trial' : 'price-paid';
+      const priceText = m.price === 'ucretsiz' ? 'Ücretsiz' : m.price === 'deneme' ? 'Deneme' : 'Ücretli';
+      const ratingClass = m.rating >= 8 ? 'rating-high' : m.rating >= 6 ? 'rating-mid' : 'rating-low';
+      const isActive = m.key === selectedModel ? ' active' : '';
+      html += `<div class="dropdown-option${isActive}" data-key="${m.key}" data-provider="${provider}" onclick="selectModel('${m.key}')">
+        <span class="option-name">${m.name}</span>
+        <span class="option-rating ${ratingClass}">${m.rating}/10</span>
+        <span class="option-price ${priceClass}">${priceText}</span>
+      </div>`;
+    });
   });
   
-  // Eğer modelOptions varsa oraya, yoksa dropdownList'e ekle
   if (optionsContainer === dropdownList) {
-    // Arama kutusunu koru
     const searchHtml = dropdownList.querySelector('.dropdown-search')?.outerHTML || '';
     dropdownList.innerHTML = searchHtml + '<div id="modelOptions">' + html + '</div>';
   } else {
     optionsContainer.innerHTML = html;
   }
 
-  // Tıklama olaylarını ata
-  document.querySelectorAll('.model-option').forEach(opt => {
+  // Tıklama ve Hover olayları
+  document.querySelectorAll('.dropdown-option').forEach(opt => {
     opt.addEventListener('mouseenter', (e) => {
       const key = opt.dataset.key;
       const m = MODEL_DB[key];
