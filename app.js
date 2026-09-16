@@ -1226,11 +1226,18 @@ const selectedText = dropdownSelected.querySelector('.selected-text');
 const selectedProvider = dropdownSelected.querySelector('.selected-provider');
 
 function initDropdown() {
-  const optionsContainer = document.getElementById('modelOptions') || dropdownList;
+  const optionsContainer = document.getElementById('modelOptions');
+  if (!optionsContainer) {
+    // Eğer modelOptions henüz yoksa (ilk açılış), oluştur
+    const searchBar = dropdownList.querySelector('.dropdown-search')?.outerHTML || '';
+    dropdownList.innerHTML = searchBar + '<div id="modelOptions"></div>';
+    // Tekrar dene
+    initDropdown();
+    return;
+  }
   
   updateSelectedDisplay();
 
-  // Gruplara ayır
   const groups = {};
   const groupOrder = [];
   Object.entries(MODEL_DB).forEach(([key, m]) => {
@@ -1238,7 +1245,6 @@ function initDropdown() {
     groups[m.provider].push({ key, ...m });
   });
 
-  // HTML oluştur (Eski grup yapısıyla)
   let html = '';
   groupOrder.forEach(provider => {
     const models = groups[provider];
@@ -1256,14 +1262,8 @@ function initDropdown() {
     });
   });
   
-  if (optionsContainer === dropdownList) {
-    const searchHtml = dropdownList.querySelector('.dropdown-search')?.outerHTML || '';
-    dropdownList.innerHTML = searchHtml + '<div id="modelOptions">' + html + '</div>';
-  } else {
-    optionsContainer.innerHTML = html;
-  }
+  optionsContainer.innerHTML = html;
 
-  // Tıklama ve Hover olayları
   document.querySelectorAll('.dropdown-option').forEach(opt => {
     opt.addEventListener('mouseenter', (e) => {
       const key = opt.dataset.key;
