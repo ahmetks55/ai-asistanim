@@ -551,7 +551,7 @@ textarea::placeholder {
   border-bottom: 1px solid var(--border);
   position: sticky;
   top: 0;
-  z-index: 9;
+  z-index: 20;
 }
 .active-filter-tag {
   display: inline-flex;
@@ -580,11 +580,12 @@ textarea::placeholder {
   background: var(--surface1);
   position: sticky;
   top: 0;
-  z-index: 9;
+  z-index: 20;
   display: flex;
   flex-direction: column;
   gap: 12px;
   animation: slideDown 0.2s ease;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
 }
 
 .filter-section h4 {
