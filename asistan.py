@@ -20,13 +20,18 @@ LLM_MODEL = "qwen2.5:0.5b"
 # TTS
 tts = pyttsx3.init()
 tts.setProperty('rate', 160)
+tts.setProperty('volume', 1.0)  # Max ses
 
 # SOHBET
 history = []
 
 def speak(text):
-    clean = re.sub(r'[^\w\s.,!?]', '', text)
+    # Sadece markdown temizle, Turkce karakterleri koru
+    clean = re.sub(r'[*#`_~>|]', '', text)
+    clean = re.sub(r'\[([^\]]+)\]\([^)]+\)', r'\1', clean)
     clean = re.sub(r'\s+', ' ', clean).strip()
+    if not clean:
+        return
     print(f"\n[ASISTAN] {clean}")
     tts.say(clean)
     tts.runAndWait()
