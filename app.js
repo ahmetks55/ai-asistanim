@@ -1536,6 +1536,7 @@ initProviderGrid();
 
 let isListening = false;
 let isVoiceActive = false;
+let isSpeaking = false;
 let recognition = null;
 let synth = window.speechSynthesis;
 let mediaStream = null;
@@ -1625,6 +1626,9 @@ function startWebSpeechRecognition() {
   recognition.interimResults = true;
 
   recognition.onresult = function(event) {
+    // Konuşuyorsa sesi işleme
+    if (isSpeaking) return;
+    
     for (let i = event.resultIndex; i < event.results.length; i++) {
       if (event.results[i].isFinal) {
         const text = event.results[i][0].transcript.trim();
@@ -1684,9 +1688,11 @@ function speakText(text) {
   // Önceki konuşmayı iptal et
   synth.cancel();
   
-  // Dinlemeyi durdur (döngü engeli)
+  // Döngü engeli: dinlemeyi tamamen durdur
+  isSpeaking = true;
   if (recognition) {
-    try { recognition.stop(); } catch(e) {}
+    try { recognition.abort(); } catch(e) {}
+    recognition = null;
     isListening = false;
     updateVoiceButton();
   }
@@ -1700,8 +1706,8 @@ function speakText(text) {
   
   const utterance = new SpeechSynthesisUtterance(cleanText);
   utterance.lang = 'tr-TR';
-  utterance.rate = 1.1;   // Biraz hızlı - doğal konuşma
-  utterance.pitch = 1.0;  // Doğal perde
+  utterance.rate = 1.3;
+  utterance.pitch = 1.0;
   utterance.volume = 1.0;
   
   if (turkishVoice) {
@@ -1713,12 +1719,19 @@ function speakText(text) {
   };
   
   utterance.onend = function() {
-    // Okuma bitince tekrar dinlemeye başla
+    isSpeaking = false;
     if (isVoiceActive) {
       setTimeout(() => {
         updateVoiceStatus('🎤 Konuşun...', 'listening');
         startListening();
-      }, 500);
+      }, 800);
+    }
+  };
+  
+  utterance.onerror = function() {
+    isSpeaking = false;
+    if (isVoiceActive) {
+      setTimeout(() => { startListening(); }, 500);
     }
   };
   
