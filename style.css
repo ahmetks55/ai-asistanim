@@ -713,3 +713,122 @@ textarea::placeholder {
   background: var(--surface2); padding: 2px 6px; border-radius: 4px;
   font-family: monospace; color: var(--primary);
 }
+
+/* Sesli Aktivasyon */
+.voice-status {
+  padding: 8px 12px;
+  background: linear-gradient(135deg, rgba(99,102,241,0.15), rgba(139,92,246,0.15));
+  border: 1px solid rgba(99,102,241,0.3);
+  border-radius: 8px;
+  margin-bottom: 8px;
+  animation: fadeIn 0.3s ease;
+}
+.voice-status-inner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--text);
+}
+.voice-icon {
+  font-size: 16px;
+  animation: pulse 1.5s infinite;
+}
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Sesli Sohbet Butonu */
+.voice-btn {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 2px solid var(--primary);
+  background: var(--surface2);
+  font-size: 20px;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.voice-btn:hover {
+  background: rgba(99,102,241,0.2);
+  transform: scale(1.05);
+}
+.voice-btn.active {
+  border-color: #22c55e;
+  background: rgba(34,197,94,0.2);
+  animation: pulse-btn-green 1.5s infinite;
+}
+.voice-btn.listening {
+  border-color: #ef4444;
+  background: rgba(239,68,68,0.2);
+  animation: pulse-btn 1s infinite;
+}
+@keyframes pulse-btn {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(239,68,68,0.4); }
+  50% { box-shadow: 0 0 0 8px rgba(239,68,68,0); }
+}
+@keyframes pulse-btn-green {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(34,197,94,0.4); }
+  50% { box-shadow: 0 0 0 8px rgba(34,197,94,0); }
+}
+
+/* Mikrofon İzin Dialogu */
+.mic-permission-modal {
+  text-align: center;
+  padding: 32px 24px;
+  max-width: 340px;
+  border-radius: 16px;
+}
+.mic-permission-icon {
+  font-size: 48px;
+  margin-bottom: 12px;
+  animation: pulse 1.5s infinite;
+}
+.mic-permission-modal h3 {
+  font-size: 18px;
+  margin: 0 0 8px;
+  color: var(--text);
+}
+.mic-permission-modal p {
+  font-size: 13px;
+  color: var(--text2);
+  margin: 0 0 20px;
+  line-height: 1.6;
+}
+.mic-permission-buttons {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+.mic-allow-btn {
+  padding: 10px 28px;
+  background: var(--primary);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.mic-allow-btn:hover { background: #5558e6; }
+.mic-deny-btn {
+  padding: 10px 28px;
+  background: var(--surface2);
+  color: var(--text2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.mic-deny-btn:hover { border-color: var(--error); color: var(--error); }

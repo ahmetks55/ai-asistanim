@@ -1201,6 +1201,10 @@ async function send() {
         addMessage(d.reply, 'bot');
         chatHistory.push({ role: 'user', content: text });
         chatHistory.push({ role: 'assistant', content: d.reply });
+        // Sesli mod açıksa yanıtı sesli oku
+        if (isVoiceActive) {
+          speakText(d.reply);
+        }
       } else {
         errorSound();
         addMessage('Hata: ' + (d.error || 'Yanıt alınamadı'), 'bot');
@@ -1525,3 +1529,236 @@ function hideTooltip() {
 // Dropdown'ı başlat
 initDropdown();
 initProviderGrid();
+
+// ============================================
+// SESLİ AKTİVASYON SİSTEMİ
+// ============================================
+
+let isListening = false;
+let isVoiceActive = false;
+let recognition = null;
+let synth = window.speechSynthesis;
+let mediaStream = null;
+
+// Sesli durum güncelle
+function updateVoiceStatus(text, state) {
+  const status = document.getElementById('voiceStatus');
+  const icon = document.getElementById('voiceIcon');
+  const textEl = document.getElementById('voiceText');
+  if (!status) return;
+  status.style.display = 'block';
+  textEl.textContent = text;
+  const icons = { listening: '🎤', thinking: '🧠', speaking: '🔊', error: '❌', waiting: '👂' };
+  icon.textContent = icons[state] || '🎙️';
+}
+
+// Sesli buton durumunu güncelle
+function updateVoiceButton() {
+  const btn = document.getElementById('voiceBtn');
+  if (!btn) return;
+  btn.classList.toggle('listening', isListening);
+  btn.classList.toggle('active', isVoiceActive && !isListening);
+}
+
+// Sesli sohbet aç/kapat
+function toggleVoice() {
+  if (isVoiceActive) {
+    isVoiceActive = false;
+    stopVoice();
+    document.getElementById('voiceStatus').style.display = 'none';
+    updateVoiceButton();
+  } else {
+    // İzin dialogu göster
+    document.getElementById('micPermissionModal').style.display = 'flex';
+  }
+}
+
+// İzin ver
+window.grantMicPermission = function() {
+  document.getElementById('micPermissionModal').style.display = 'none';
+  isVoiceActive = true;
+  updateVoiceStatus('🎤 Konuşun...', 'listening');
+  startListening();
+};
+
+// İzin red
+window.denyMicPermission = function() {
+  document.getElementById('micPermissionModal').style.display = 'none';
+};
+
+// ESC ile kapat
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') {
+    document.getElementById('micPermissionModal').style.display = 'none';
+  }
+});
+
+// Dinlemeyi durdur
+function stopVoice() {
+  if (recognition) { try { recognition.stop(); } catch(e) {} recognition = null; }
+  if (mediaStream) { mediaStream.getTracks().forEach(t => t.stop()); mediaStream = null; }
+  isListening = false;
+}
+
+// Dinleme başlat (Chrome = Web Speech API, Electron = Vosk)
+function startListening() {
+  // Web Speech API varsa kullan (Chrome'da çalışır)
+  if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+    startWebSpeechRecognition();
+  } else {
+    updateVoiceStatus('❌ Tarayıcınız sesli tanımayı desteklemiyor. Chrome kullanın.', 'error');
+  }
+}
+
+// Web Speech API ile dinleme (Chrome)
+function startWebSpeechRecognition() {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  recognition = new SR();
+  recognition.lang = 'tr-TR';
+  recognition.continuous = true;
+  recognition.interimResults = true;
+
+  recognition.onresult = function(event) {
+    for (let i = event.resultIndex; i < event.results.length; i++) {
+      if (event.results[i].isFinal) {
+        const text = event.results[i][0].transcript.trim();
+        if (text.length > 1) {
+          console.log('Söylenen:', text);
+          const userInput = document.getElementById('userInput');
+          userInput.value = text;
+          updateVoiceStatus('🧠 Düşünüyorum...', 'thinking');
+          sendVoiceMessage(text);
+          return;
+        }
+      }
+    }
+  };
+
+  recognition.onerror = function(event) {
+    console.log('Tanıma hatası:', event.error);
+    if (event.error === 'not-allowed') {
+      updateVoiceStatus('❌ Mikrofon izni verilmedi', 'error');
+      isVoiceActive = false;
+      updateVoiceButton();
+    } else if (event.error === 'network') {
+      updateVoiceStatus('❌ Ağ hatası - Chrome ile deneyin', 'error');
+      isVoiceActive = false;
+      updateVoiceButton();
+    } else if (event.error !== 'aborted' && isVoiceActive) {
+      updateVoiceStatus('🎤 Tekrar konuşun...', 'listening');
+    }
+  };
+
+  recognition.onend = function() {
+    isListening = false;
+    if (isVoiceActive) {
+      setTimeout(() => {
+        if (isVoiceActive) {
+          try { recognition.start(); isListening = true; updateVoiceButton(); } catch(e) {}
+        }
+      }, 200);
+    }
+  };
+
+  try {
+    recognition.start();
+    isListening = true;
+    updateVoiceButton();
+    console.log('Web Speech API dinleme başladı');
+  } catch(e) {
+    console.log('Tanıma başlatma hatası:', e);
+    updateVoiceStatus('❌ Mikrofon başlatılamadı', 'error');
+  }
+}
+
+// Yanıtı sesli oku
+function speakText(text) {
+  if (!synth) return;
+  
+  // Önceki konuşmayı iptal et
+  synth.cancel();
+  
+  // Metni temizle (HTML etiketlerini kaldır)
+  const cleanText = text.replace(/<[^>]*>/g, '').replace(/[*#`_~]/g, '');
+  
+  const utterance = new SpeechSynthesisUtterance(cleanText);
+  utterance.lang = 'tr-TR';
+  utterance.rate = 1.0;
+  utterance.pitch = 1.0;
+  
+  utterance.onstart = function() {
+    updateVoiceStatus('🔊 Yanıt okunuyor...', 'speaking');
+  };
+  
+  utterance.onend = function() {
+    if (isVoiceActive) {
+      updateVoiceStatus('🎤 Konuşun...', 'listening');
+    }
+  };
+  
+  synth.speak(utterance);
+}
+
+// Sesli mesaj gönder
+async function sendVoiceMessage(text) {
+  const val = selectedModel;
+  const [provider, model] = val.split(':');
+  
+  // Kullanıcı mesajını ekle
+  addMessage(text, 'user');
+  chatHistory.push({ role: 'user', content: text });
+  
+  const typing = addMessage('Düşünüyorum...', 'bot');
+  typing.classList.add('typing');
+  
+  const messages = [];
+  const context = chatHistory.map(m => m.role + ': ' + m.content).join('\n');
+  if (context) messages.push({ role: 'system', content: context });
+  messages.push({ role: 'user', content: text });
+  
+  try {
+    console.log('Köprüye gönderiliyor:', API + '/chat');
+    const r = await fetch(API + '/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ provider, model, messages })
+    });
+    
+    console.log('Yanıt durumu:', r.status);
+    const d = await r.json();
+    console.log('Yanıt:', d);
+    
+    typing.remove();
+    if (d.reply) {
+      notifySound();
+      addMessage(d.reply, 'bot');
+      chatHistory.push({ role: 'assistant', content: d.reply });
+      // Sesli oku
+      speakText(d.reply);
+    } else {
+      errorSound();
+      const errorMsg = 'Hata: ' + (d.error || 'Yanıt alınamadı');
+      addMessage(errorMsg, 'bot');
+      updateVoiceStatus('❌ ' + errorMsg, 'error');
+    }
+  } catch(e) {
+    console.log('Bağlantı hatası:', e);
+    typing.remove();
+    connErrorSound();
+    const errorMsg = 'Köprüye bağlanılamadı. Hata: ' + e.message;
+    addMessage(errorMsg, 'bot');
+    updateVoiceStatus('❌ ' + errorMsg, 'error');
+  }
+  
+  // Dinlemeye geri dön
+  if (isVoiceActive) {
+    setTimeout(() => {
+      updateVoiceStatus('🎤 Konuşun...', 'listening');
+    }, 1000);
+  }
+}
+
+// Sayfa yüklendiğinde
+document.addEventListener('DOMContentLoaded', function() {
+  console.log('Sesli aktivasyon sistemi hazır. 🎙️');
+});
