@@ -1685,10 +1685,9 @@ function startWebSpeechRecognition() {
 function speakText(text) {
   if (!synth) return;
   
-  // Önceki konuşmayı iptal et
   synth.cancel();
   
-  // Döngü engeli: dinlemeyi tamamen durdur
+  // Döngü engeli
   isSpeaking = true;
   if (recognition) {
     try { recognition.abort(); } catch(e) {}
@@ -1697,10 +1696,41 @@ function speakText(text) {
     updateVoiceButton();
   }
   
-  // Metni temizle (HTML etiketlerini kaldır)
-  const cleanText = text.replace(/<[^>]*>/g, '').replace(/[*#`_~]/g, '');
+  // Metni konuşma diline çevir
+  let cleanText = text
+    // HTML etiketlerini kaldır
+    .replace(/<[^>]*>/g, '')
+    // Markdown formatlarını kaldır
+    .replace(/[*#`_~>|]/g, '')
+    // Linkleri temizle: [text](url) → text
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+    // Emojileri doğal kelimelere çevir
+    .replace(/😊|😃|😄|😁|😆/g, 'gülümseyerek')
+    .replace(/😍|🥰|😘|💕|❤️|💖|💗|♥️/g, 'sevgiyle')
+    .replace(/👍|👏|🙌|🎉|✅|💯|🔥|⭐|🌟|✨/g, 'harika')
+    .replace(/😂|🤣|😹|😆|🤭/g, 'gülerek')
+    .replace(/🤔|💭|🧐/g, 'düşünerek')
+    .replace(/😢|😭|😔|😥|😿/g, 'üzgün bir şekilde')
+    .replace(/😠|😡|🤬|💢/g, 'kızgın bir şekilde')
+    .replace(/😱|😨|😰|😮|😯|😲/g, 'şaşkınlıkla')
+    .replace(/🙏|🙏🏻|🙏🏼|🙏🏽|🙏🏾|🙏🏿/g, 'rica ederek')
+    .replace(/👋|✋|🤚|🖐️/g, 'el sallayarak')
+    .replace(/💪|🦾/g, 'güçlü bir şekilde')
+    .replace(/🤝|🤜|🤛/g, 'tokaşarak')
+    .replace(/👀|👁️/g, 'dikkatle bakarak')
+    .replace(/🧠|💡|🔮/g, 'akıllıca')
+    .replace(/🚀|✈️|🛸|🛩️/g, 'hızla')
+    .replace(/🎯|🏁|🎪/g, 'hedefe ulaşarak')
+    .replace(/💻|🖥️|📱|⌨️|🖱️/g, 'teknolojiyle')
+    .replace(/🎵|🎶|🎼|🎸|🎹|🥁/g, 'müzikle')
+    .replace(/☀️|🌞|🌝|🌈|⛅|🌤️|🌥️|☁️|🌧️|⛈️|❄️/g, 'hava durumunda')
+    // Tekrarlayan emojileri temizle
+    .replace(/(.{1,30})\1{2,}/g, '$1')
+    // fazla boşlukları temizle
+    .replace(/\s+/g, ' ')
+    .trim();
   
-  // Türkçe ses seç (varsa)
+  // Türkçe ses seç
   const voices = synth.getVoices();
   const turkishVoice = voices.find(v => v.lang.startsWith('tr')) || voices.find(v => v.lang.startsWith('tr-TR'));
   
