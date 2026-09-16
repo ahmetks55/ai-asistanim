@@ -968,7 +968,10 @@ fetch(API + '/health').then(r => r.json()).then(() => {
 });
 
 // Settings
-document.getElementById('settingsBtn').onclick = () => document.getElementById('settingsModal').style.display = 'flex';
+document.getElementById('settingsBtn').onclick = () => {
+  document.getElementById('settingsModal').style.display = 'flex';
+  initProviderGrid();
+};
 document.getElementById('closeSettings').onclick = () => document.getElementById('settingsModal').style.display = 'none';
 document.getElementById('settingsModal').onclick = (e) => { if (e.target.id === 'settingsModal') e.target.style.display = 'none'; };
 
