@@ -1552,6 +1552,12 @@ function updateVoiceStatus(text, state) {
   icon.textContent = icons[state] || '🎙️';
 }
 
+// Sesleri önceden yükle
+if (synth) {
+  synth.getVoices();
+  synth.onvoiceschanged = function() { synth.getVoices(); };
+}
+
 // Sesli buton durumunu güncelle
 function updateVoiceButton() {
   const btn = document.getElementById('voiceBtn');
@@ -1678,21 +1684,41 @@ function speakText(text) {
   // Önceki konuşmayı iptal et
   synth.cancel();
   
+  // Dinlemeyi durdur (döngü engeli)
+  if (recognition) {
+    try { recognition.stop(); } catch(e) {}
+    isListening = false;
+    updateVoiceButton();
+  }
+  
   // Metni temizle (HTML etiketlerini kaldır)
   const cleanText = text.replace(/<[^>]*>/g, '').replace(/[*#`_~]/g, '');
   
+  // Türkçe ses seç (varsa)
+  const voices = synth.getVoices();
+  const turkishVoice = voices.find(v => v.lang.startsWith('tr')) || voices.find(v => v.lang.startsWith('tr-TR'));
+  
   const utterance = new SpeechSynthesisUtterance(cleanText);
   utterance.lang = 'tr-TR';
-  utterance.rate = 1.0;
-  utterance.pitch = 1.0;
+  utterance.rate = 1.1;   // Biraz hızlı - doğal konuşma
+  utterance.pitch = 1.0;  // Doğal perde
+  utterance.volume = 1.0;
+  
+  if (turkishVoice) {
+    utterance.voice = turkishVoice;
+  }
   
   utterance.onstart = function() {
     updateVoiceStatus('🔊 Yanıt okunuyor...', 'speaking');
   };
   
   utterance.onend = function() {
+    // Okuma bitince tekrar dinlemeye başla
     if (isVoiceActive) {
-      updateVoiceStatus('🎤 Konuşun...', 'listening');
+      setTimeout(() => {
+        updateVoiceStatus('🎤 Konuşun...', 'listening');
+        startListening();
+      }, 500);
     }
   };
   
