@@ -547,11 +547,11 @@ textarea::placeholder {
   flex-wrap: wrap;
   gap: 6px;
   padding: 6px 12px;
-  background: rgba(99, 102, 241, 0.1);
+  background: var(--surface);
   border-bottom: 1px solid var(--border);
   position: sticky;
   top: 0;
-  z-index: 20;
+  z-index: 100;
 }
 .active-filter-tag {
   display: inline-flex;
@@ -577,10 +577,10 @@ textarea::placeholder {
 .filter-dropdown {
   padding: 12px;
   border-bottom: 1px solid var(--border);
-  background: var(--surface1);
+  background: var(--surface);
   position: sticky;
   top: 0;
-  z-index: 20;
+  z-index: 100;
   display: flex;
   flex-direction: column;
   gap: 12px;
