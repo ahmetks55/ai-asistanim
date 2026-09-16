@@ -36,8 +36,38 @@
             <div class="dropdown-list" id="dropdownList">
               <div class="dropdown-toolbar">
                 <div class="dropdown-search">
-                  <input type="text" id="modelSearch" placeholder="Ara: isim, @sağlayıcı, $fiyat, #puan, #yetenek" oninput="filterModels(this.value)">
+                  <input type="text" id="modelSearch" placeholder="Model ara (isim, @saglayici, $fiyat, #puan, #yetenek)" oninput="filterModels(this.value)">
                 </div>
+                <button class="filter-toggle-btn" id="filterToggleBtn" onclick="toggleFilterPanel()">🔍 Filtreler</button>
+              </div>
+              <div class="filter-panel" id="filterPanel" style="display:none;">
+                <div class="filter-section">
+                  <label>🏢 Sağlayıcı</label>
+                  <select id="filterProvider" onchange="filterModels()" multiple size="5">
+                    <option value="">Tümü</option>
+                  </select>
+                </div>
+                <div class="filter-section">
+                  <label>💰 Fiyat</label>
+                  <div class="filter-chips">
+                    <button type="button" class="filter-chip" data-filter="price" data-value="ucretsiz" onclick="toggleFilterChip(this)">Ücretsiz</button>
+                    <button type="button" class="filter-chip" data-filter="price" data-value="deneme" onclick="toggleFilterChip(this)">Deneme</button>
+                    <button type="button" class="filter-chip" data-filter="price" data-value="ucretli" onclick="toggleFilterChip(this)">Ücretli</button>
+                  </div>
+                </div>
+                <div class="filter-section">
+                  <label>⭐ Puan</label>
+                  <div class="filter-chips">
+                    <button type="button" class="filter-chip" data-filter="rating" data-value="9" onclick="toggleFilterChip(this)">9-10</button>
+                    <button type="button" class="filter-chip" data-filter="rating" data-value="7" onclick="toggleFilterChip(this)">7-8</button>
+                    <button type="button" class="filter-chip" data-filter="rating" data-value="5" onclick="toggleFilterChip(this)">5-6</button>
+                  </div>
+                </div>
+                <div class="filter-section">
+                  <label>🛠️ Yetenek</label>
+                  <div class="filter-chips" id="capabilityChips"></div>
+                </div>
+                <button class="filter-clear-btn" onclick="clearAllFilters()">Temizle</button>
               </div>
               <div id="modelOptions"></div>
             </div>

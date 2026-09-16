@@ -1300,48 +1300,48 @@ window.selectModel = function(id) {
   if (activeOpt) activeOpt.classList.add('active');
 };
 
-// Model filtreleme (Tek input: @sağlayıcı, $fiyat, #puan, #yetenek, isim)
+// Model filtreleme (Tek input: @sağlayıcı, $fiyat, #puan, #yetenek, isim + Panel filtreleri)
 window.filterModels = function(input) {
   const query = (input?.value || input || '').toLowerCase().trim();
   
-  // Filtreleri parse et
-  let providerFilter = '';
-  let priceFilter = '';
-  let ratingFilter = '';
-  let capFilter = '';
+  // Arama kutusundan filtreleri parse et (@, $, #)
+  let searchProviderFilter = '';
+  let searchPriceFilter = '';
+  let searchRatingFilter = '';
+  let searchCapFilter = '';
   let searchText = query;
 
-  // @sağlayıcı
   const providerMatch = query.match(/@(\S+)/);
-  if (providerMatch) { providerFilter = providerMatch[1]; searchText = searchText.replace(providerMatch[0], '').trim(); }
+  if (providerMatch) { searchProviderFilter = providerMatch[1]; searchText = searchText.replace(providerMatch[0], '').trim(); }
 
-  // $fiyat (free/deneme/paid veya ücretsiz/deneme/ücretli)
   const priceMatch = query.match(/\$(\S+)/);
   if (priceMatch) { 
     const p = priceMatch[1];
-    if (['free','ücretsiz','ucretsiz'].includes(p)) priceFilter = 'ucretsiz';
-    else if (['trial','deneme'].includes(p)) priceFilter = 'deneme';
-    else if (['paid','ücretli','ucretli'].includes(p)) priceFilter = 'ucretli';
+    if (['free','ücretsiz','ucretsiz'].includes(p)) searchPriceFilter = 'ucretsiz';
+    else if (['trial','deneme'].includes(p)) searchPriceFilter = 'deneme';
+    else if (['paid','ücretli','ucretli'].includes(p)) searchPriceFilter = 'ucretli';
     searchText = searchText.replace(priceMatch[0], '').trim();
   }
 
-  // #puan (9, 7, 5...)
   const ratingMatch = query.match(/#(\d+)/);
-  if (ratingMatch) { ratingFilter = ratingMatch[1]; searchText = searchText.replace(ratingMatch[0], '').trim(); }
+  if (ratingMatch) { searchRatingFilter = ratingMatch[1]; searchText = searchText.replace(ratingMatch[0], '').trim(); }
 
-  // #yetenek (kod, matematik...)
   const capMatch = query.match(/#([^#\s@$]+)/);
-  if (capMatch && !ratingMatch) { capFilter = capMatch[1]; searchText = searchText.replace(capMatch[0], '').trim(); }
+  if (capMatch && !ratingMatch) { searchCapFilter = capMatch[1]; searchText = searchText.replace(capMatch[0], '').trim(); }
   
-  // Eğer @ $ # yoksa ve sadece sayı girildiyse puan filtresi olarak kabul et
-  if (!providerFilter && !priceFilter && !ratingFilter && !capFilter && !isNaN(query) && query !== '') {
-    ratingFilter = query;
+  if (!searchProviderFilter && !searchPriceFilter && !searchRatingFilter && !searchCapFilter && !isNaN(query) && query !== '') {
+    searchRatingFilter = query;
     searchText = '';
   }
 
+  // Panel filtrelerini al
+  const panelProvider = Array.from(document.querySelectorAll('#filterProvider option:checked')).map(o => o.value).filter(v => v);
+  const panelPrice = Array.from(document.querySelectorAll('.filter-chip[data-filter="price"].active')).map(b => b.dataset.value);
+  const panelRating = Array.from(document.querySelectorAll('.filter-chip[data-filter="rating"].active')).map(b => b.dataset.value);
+  const panelCap = Array.from(document.querySelectorAll('.filter-chip[data-filter="capability"].active')).map(b => b.dataset.value);
+
   const options = document.querySelectorAll('.dropdown-option');
   
-  // Önce tüm modelleri filtrele
   options.forEach(opt => {
     const id = opt.dataset.key;
     const m = MODEL_DB[id];
@@ -1350,26 +1350,104 @@ window.filterModels = function(input) {
     
     const matchesName = m.name.toLowerCase().includes(searchText);
     const matchesDesc = (m.desc || '').toLowerCase().includes(searchText);
-    const matchesProvider = !providerFilter || p.name.toLowerCase().includes(providerFilter);
-    const matchesPrice = !priceFilter || m.price === priceFilter;
-    const matchesRating = !ratingFilter || (m.rating >= parseInt(ratingFilter) && m.rating < parseInt(ratingFilter) + 3);
-    const matchesCap = !capFilter || (m.caps && m.caps.some(c => c.toLowerCase().includes(capFilter)));
     const matchesCaps = m.caps.some(c => c.toLowerCase().includes(searchText));
     const matchesRatingQuery = searchText.includes('puan') && m.rating.toString().includes(searchText.replace('puan', '').trim());
     const matchesRatingDirect = !isNaN(searchText) && searchText !== '' && m.rating.toString() === searchText;
-
     const matchesSearch = (matchesName || matchesDesc || matchesCaps || matchesRatingQuery || matchesRatingDirect);
-    const matchesFilters = matchesProvider && matchesPrice && matchesRating && matchesCap;
-    
-    opt.style.display = (matchesSearch && matchesFilters) ? '' : 'none';
+
+    // Sağlayıcı filtresi (Arama KUTUSU VEYA Panel)
+    const providerOk = (!searchProviderFilter && panelProvider.length === 0) || 
+                       (searchProviderFilter && p.name.toLowerCase().includes(searchProviderFilter)) ||
+                       (panelProvider.length > 0 && panelProvider.includes(p.name));
+
+    // Fiyat filtresi
+    const priceOk = (!searchPriceFilter && panelPrice.length === 0) ||
+                    (searchPriceFilter && m.price === searchPriceFilter) ||
+                    (panelPrice.length > 0 && panelPrice.includes(m.price));
+
+    // Puan filtresi
+    let ratingOk = true;
+    if (searchRatingFilter) {
+      ratingOk = m.rating >= parseInt(searchRatingFilter) && m.rating < parseInt(searchRatingFilter) + 3;
+    } else if (panelRating.length > 0) {
+      ratingOk = panelRating.some(r => m.rating >= parseInt(r) && m.rating < parseInt(r) + 3);
+    }
+
+    // Yetenek filtresi
+    const capOk = (!searchCapFilter && panelCap.length === 0) ||
+                  (searchCapFilter && m.caps.some(c => c.toLowerCase().includes(searchCapFilter))) ||
+                  (panelCap.length > 0 && panelCap.some(c => m.caps.includes(c)));
+
+    opt.style.display = (matchesSearch && providerOk && priceOk && ratingOk && capOk) ? '' : 'none';
   });
   
-  // Sonra grup başlıklarını kontrol et
+  // Grup başlıklarını kontrol et
   document.querySelectorAll('.dropdown-group-label').forEach(label => {
     const provider = label.dataset.provider;
     const visibleModels = document.querySelectorAll(`.dropdown-option[data-provider="${provider}"]:not([style*="display: none"])`);
     label.style.display = visibleModels.length > 0 ? '' : 'none';
   });
+  
+  // Sağlayıcı ve Yetenek filtrelerini doldur (ilk açılışta)
+  populateFilterOptions();
+};
+
+function populateFilterOptions() {
+  // Sağlayıcı dropdown
+  const providerSelect = document.getElementById('filterProvider');
+  if (providerSelect && !providerSelect.dataset.populated) {
+    const providers = [...new Set(Object.values(MODEL_DB).map(m => m.provider))].sort();
+    providers.forEach(prov => {
+      const opt = document.createElement('option');
+      opt.value = prov;
+      opt.textContent = prov;
+      providerSelect.appendChild(opt);
+    });
+    providerSelect.dataset.populated = 'true';
+  }
+
+  // Yetenek chip'leri
+  const capContainer = document.getElementById('capabilityChips');
+  if (capContainer && !capContainer.dataset.populated) {
+    const allCaps = [...new Set(Object.values(MODEL_DB).flatMap(m => m.caps || []))].sort();
+    allCaps.forEach(cap => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'filter-chip';
+      btn.dataset.filter = 'capability';
+      btn.dataset.value = cap;
+      btn.textContent = cap;
+      btn.onclick = () => toggleFilterChip(btn);
+      capContainer.appendChild(btn);
+    });
+    capContainer.dataset.populated = 'true';
+  }
+}
+
+window.toggleFilterPanel = function() {
+  const panel = document.getElementById('filterPanel');
+  const btn = document.getElementById('filterToggleBtn');
+  if (panel.style.display === 'none') {
+    panel.style.display = 'flex';
+    btn.classList.add('active');
+    populateFilterOptions(); // Açılırken filtreleri doldur
+  } else {
+    panel.style.display = 'none';
+    btn.classList.remove('active');
+  }
+};
+
+window.toggleFilterChip = function(btn) {
+  btn.classList.toggle('active');
+  filterModels(); // Filtreyi tekrar çalıştır
+};
+
+window.clearAllFilters = function() {
+  document.querySelectorAll('.filter-chip.active').forEach(b => b.classList.remove('active'));
+  const providerSelect = document.getElementById('filterProvider');
+  if (providerSelect) Array.from(providerSelect.selectedOptions).forEach(o => o.selected = false);
+  document.getElementById('modelSearch').value = '';
+  filterModels();
 };
 
 

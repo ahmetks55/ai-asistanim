@@ -501,7 +501,141 @@ textarea::placeholder {
   border-color: var(--primary);
 }
 
-/* Settings Info Box */
+/* Dropdown Toolbar */
+.dropdown-toolbar {
+  display: flex;
+  gap: 8px;
+  padding: 8px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface1);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+.dropdown-search {
+  flex: 1;
+  min-width: 0;
+  padding: 0;
+  border: none;
+}
+
+/* Filter Toggle Button */
+.filter-toggle-btn {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px 12px;
+  color: var(--text);
+  font-size: 11px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s;
+}
+.filter-toggle-btn:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+.filter-toggle-btn.active {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: white;
+}
+
+/* Filter Panel */
+.filter-panel {
+  padding: 10px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface1);
+  position: sticky;
+  top: 38px;
+  z-index: 9;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  animation: slideDown 0.2s ease;
+}
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.filter-section {
+  flex: 1;
+  min-width: 140px;
+}
+.filter-section label {
+  display: block;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text2);
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.filter-section select {
+  width: 100%;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px 10px;
+  color: var(--text);
+  font-size: 11px;
+  cursor: pointer;
+}
+.filter-section select:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+
+/* Filter Chips */
+.filter-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.filter-chip {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 4px 12px;
+  color: var(--text2);
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.filter-chip:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+.filter-chip.active {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: white;
+}
+
+/* Capability Chips Container */
+#capabilityChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+/* Filter Clear Button */
+.filter-clear-btn {
+  width: 100%;
+  margin-top: 8px;
+  padding: 6px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text2);
+  font-size: 11px;
+  cursor: pointer;
+}
+.filter-clear-btn:hover {
+  border-color: var(--error);
+  color: var(--error);
+}
 .settings-info {
   display: flex; gap: 14px; align-items: flex-start;
   padding: 16px; margin: 0 16px; border-radius: 12px;
