@@ -1,133 +1,106 @@
 """
-AI Asistanım - Sohbet Asistanı
-Sürekli konuşan, dinleyen ve yanıt veren asistan
+AI Asistanim - Sohbet Asistani
+Surekli konusan, dinleyen ve yanit veren asistan
 """
 
 import os
 import sys
 import json
 import time
-import wave
-import struct
-import threading
-import queue
 
-# ============================================
-# KURULUM
-# ============================================
-
-def install(pkg, name=None):
-    try:
-        __import__(pkg)
-    except ImportError:
-        print(f"⏳ {name or pkg} yükleniyor...")
-        os.system(f'pip install {pkg}')
-
-install('pyaudio', 'PyAudio')
-install('pyttsx3', 'pyttsx3')
-install('vosk', 'vosk')
-install('requests', 'requests')
+# Windows icin UTF-8
+if sys.platform == 'win32':
+    os.system('chcp 65001 >nul 2>&1')
+    import io
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8')
 
 import pyaudio
 import pyttsx3
 import requests
-from vosk import Model, KaldiRecognizer
 
 # ============================================
 # AYARLAR
 # ============================================
 
 OLLAMA_URL = "http://localhost:11434"
-MODEL = "qwen2.5:0.5b"  # 4GB RAM için küçük model
+MODEL = "qwen2.5:0.5b"
 SAMPLE_RATE = 16000
-WAKE_WORDS = ["hey jarvis", "hey asistan", "jarvis", "asistan", "selam"]
 
 # ============================================
-# SES SİSTEMİ
+# SES SISTEMI (TTS)
 # ============================================
 
 class Voice:
-    """Sesli okuma (TTS)"""
-    
     def __init__(self):
         self.engine = pyttsx3.init()
         self.engine.setProperty('rate', 160)
         self.engine.setProperty('volume', 1.0)
         
-        # Türkçe ses ara
+        # Turkce ses ara
         voices = self.engine.getProperty('voices')
         for v in voices:
             if 'turkish' in v.name.lower() or 'tr' in v.id.lower():
                 self.engine.setProperty('voice', v.id)
-                print(f"🎤 Türkçe ses: {v.name}")
+                print(f"[OK] Turkce ses: {v.name}")
                 break
     
     def speak(self, text):
-        """Metni seslendir"""
         clean = self.clean(text)
-        print(f"\n🤖 Asistan: {clean}")
+        print(f"\n[ASISTAN] {clean}")
         self.engine.say(clean)
         self.engine.runAndWait()
     
     def clean(self, text):
-        """Temizle"""
         import re
-        emojis = {
-            '😊': 'gülümseyerek', '😃': 'gülümseyerek', '😄': 'gülümseyerek',
-            '👍': 'harika', '👏': 'harika', '🎉': 'harika',
-            '❤️': 'sevgiyle', '💕': 'sevgiyle',
-            '😂': 'gülerek', '🤣': 'gülerek',
-            '🤔': 'düşünerek', '💭': 'düşünerek',
-            '😢': 'üzgün', '😭': 'üzgün',
-            '🙏': 'rica ederek', '💪': 'güçlü',
-            '🚀': 'hızla', '🧠': 'akıllıca',
-        }
-        for e, w in emojis.items():
-            text = text.replace(e, w)
+        # Emojileri temizle
+        text = re.sub(r'[^\w\s.,!? Turkce karakter]', '', text)
+        # Markdown temizle
         text = re.sub(r'[*#`_~>|]', '', text)
         text = re.sub(r'\[([^\]]+)\]\([^)]+\)', r'\1', text)
         text = re.sub(r'\s+', ' ', text).strip()
         return text
 
 # ============================================
-# DİNLEME SİSTEMİ
+# DINLEME SISTEMI (STT)
 # ============================================
 
 class Listener:
-    """Mikrofondan dinleme (Vosk ile)"""
-    
     def __init__(self):
-        self.model = None
         self.recognizer = None
         self._load_model()
     
     def _load_model(self):
-        """Vosk modelini yükle"""
-        paths = ['vosk-model-tr-0.3', 'vosk-model-small-tr-0.4', 'vosk-model-small-en-us-0.15']
+        try:
+            from vosk import Model, KaldiRecognizer
+        except ImportError:
+            print("[HATA] vosk yuklu degil. pip install vosk")
+            return
+        
+        # Model yolu ara
+        paths = ['vosk-model-small-tr-0.3', 'vosk-model-tr-0.3', 'vosk-model-small-en-us-0.15']
         
         for path in paths:
             if os.path.exists(path):
                 try:
-                    self.model = Model(path)
-                    self.recognizer = KaldiRecognizer(self.model, SAMPLE_RATE)
-                    print(f"✅ Vosk modeli: {path}")
+                    model = Model(path)
+                    self.recognizer = KaldiRecognizer(model, SAMPLE_RATE)
+                    print(f"[OK] Vosk modeli: {path}")
                     return
-                except:
+                except Exception as e:
+                    print(f"[UYARI] {path} yuklenemedi: {e}")
                     continue
         
-        # Otomatik indir
-        print("⏳ Vosk modeli indiriliyor...")
-        os.system('pip install vosk')
-        print("⚠️ Küçük İngilizce model kullanılıyor")
-        print("   Türkçe model: https://alphacephei.com/vosk/models")
+        print("[HATA] Vosk modeli bulunamadi!")
+        print("  Turkce model icin: https://alphacephei.com/vosk/models")
+        print("  Kucuk model: vosk-model-small-tr-0.3.zip")
     
     def listen(self, timeout=8):
-        """Mikrofondan dinle"""
         if not self.recognizer:
-            print("❌ Vosk yüklenmedi")
+            print("[HATA] Vosk yuklenmedi")
             return ""
         
-        print("🎤 Dinleniyor... (konuşun)")
+        print("[MIK] Dinleniyor... (konusun)")
         
         pa = pyaudio.PyAudio()
         stream = pa.open(
@@ -138,6 +111,7 @@ class Listener:
             frames_per_buffer=4096
         )
         
+        import json as json_mod
         frames = []
         start = time.time()
         
@@ -147,45 +121,44 @@ class Listener:
                 frames.append(data)
                 
                 if self.recognizer.AcceptWaveform(data):
-                    result = json.loads(self.recognizer.Result())
+                    result = json_mod.loads(self.recognizer.Result())
                     text = result.get('text', '').strip()
                     if text:
                         stream.stop_stream()
                         stream.close()
                         pa.terminate()
                         return text
-            except:
-                continue
+            except Exception as e:
+                print(f"[HATA] Mikrofon: {e}")
+                break
         
-        final = json.loads(self.recognizer.FinalResult())
-        stream.stop_stream()
-        stream.close()
-        pa.terminate()
-        
-        return final.get('text', '')
+        try:
+            final = json_mod.loads(self.recognizer.FinalResult())
+            stream.stop_stream()
+            stream.close()
+            pa.terminate()
+            return final.get('text', '')
+        except:
+            return ""
 
 # ============================================
-# ZEKA SİSTEMİ (LLM)
+# ZEKA SISTEMI (LLM)
 # ============================================
 
 class Brain:
-    """Ollama LLM ile düşünme"""
-    
     def __init__(self):
         self.history = []
-        self.system_prompt = """Sen "AI Asistanım" adında yardımcı bir asistansın.
-- Kısa ve net yanıt ver (1-2 cümle)
-- Türkçe konuş
-- Nazik ve yardımcı ol
-- Gereksiz tekrar yapma
-- Doğal konuş, robot gibi olma"""
+        self.system_prompt = """Sen "AI Asistan" yardimci bir asistansin.
+- Kisa ve net yanit ver (1-2 cumle)
+- Turkce konus
+- Nazik ve yardimci ol
+- Gereksiz tekrar yapma"""
     
     def think(self, text):
-        """Düşün ve yanıt üret"""
         self.history.append({"role": "user", "content": text})
         
         messages = [{"role": "system", "content": self.system_prompt}]
-        messages.extend(self.history[-8:])  # Son 8 mesajı kullan
+        messages.extend(self.history[-8:])
         
         try:
             response = requests.post(
@@ -205,27 +178,24 @@ class Brain:
                 self.history.append({"role": "assistant", "content": reply})
                 return reply
             else:
-                return "Düşünemiyorum, tekrar söyler misin?"
+                return "Dusunemiyorum, tekrar soyler misin?"
                 
         except requests.exceptions.ConnectionError:
-            return "Ollama çalışmıyor. Lütfen 'ollama serve' çalıştırın."
+            return "Ollama calismiyor. Lutfen 'ollama serve' calistirin."
         except Exception as e:
-            return f"Bir hata oluştu: {str(e)}"
+            return f"Bir hata olustu: {str(e)}"
     
     def reset(self):
-        """Geçmişi temizle"""
         self.history = []
 
 # ============================================
-# ANA ASİSTAN
+# ANA ASISTAN
 # ============================================
 
 class Assistant:
-    """Sürekli sohbet eden asistan"""
-    
     def __init__(self):
         print("\n" + "="*50)
-        print("🤖 AI ASİSTANIM - SOHBET ASİSTANI")
+        print("   AI ASISTAN - SOHBET ASISTANI")
         print("="*50)
         
         self.voice = Voice()
@@ -233,112 +203,110 @@ class Assistant:
         self.brain = Brain()
         
         self.running = False
-        
-        print("="*50)
-        print("✅ Hazır!")
-        print(f"🎯 Wake word: 'Hey Jarvis' veya 'Hey Asistan'")
-        print(f"🤖 Model: {MODEL}")
-        print(f"🌐 Ollama: {OLLAMA_URL}")
-        print("="*50)
+        self.wake_words = ["hey jarvis", "hey asistan", "jarvis", "asistan", "selam"]
     
     def start(self):
-        """Asistanı başlat"""
         self.running = True
         
-        self.voice.speak("Merhaba! Ben AI asistanınızım. Bana 'Hey Jarvis' diyerek seslenebilirsiniz.")
+        self.voice.speak("Merhaba! Ben AI asistaninizim. Bana seslenebilirsiniz.")
         
         while self.running:
             try:
+                # Vosk yuklu mu kontrol et
+                if not self.listener.recognizer:
+                    print("\n[HATA] Vosk modeli yuklenemedi!")
+                    print("  Lutfen vosk-model-small-tr-0.3 dosyasini indirin:")
+                    print("  https://huggingface.co/rhasspy/vosk-models/resolve/main/tr/vosk-model-small-tr-0.3.zip")
+                    print("\n  veya konsoldan konusarak devam edin:")
+                    text = input("\n[SIZ] Mesajiniz: ").strip()
+                    if text:
+                        self._process(text)
+                    continue
+                
                 # Wake word bekle
-                print("\n⏳ 'Hey Jarvis' bekleniyor...")
-                self._wait_for_wake_word()
-                
-                # Onay sesi
-                self.voice.speak("Dinliyorum.")
-                
-                # Kullanıcıyı dinle
-                text = self.listener.listen(timeout=8)
+                print("\n[BEKLE] 'Hey Jarvis' bekleniyor...")
+                text = self.listener.listen(timeout=10)
                 
                 if not text:
-                    self.voice.speak("Anlayamadım, tekrar söyler misin?")
                     continue
                 
-                print(f"📝 Söylenen: {text}")
+                text_lower = text.lower()
                 
-                # Komut kontrolü
-                if self._check_commands(text):
-                    continue
+                # Wake word kontrolu
+                wake_found = False
+                for word in self.wake_words:
+                    if word in text_lower:
+                        wake_found = True
+                        break
                 
-                # LLM'e gönder
-                print("🧠 Düşünüyorum...")
-                response = self.brain.think(text)
-                
-                # Yanıtı seslendir
-                self.voice.speak(response)
-                
+                if wake_found:
+                    print(f"[BULDU] {text}")
+                    self.voice.speak("Dinliyorum.")
+                    
+                    # Kullaniciyi dinle
+                    user_text = self.listener.listen(timeout=8)
+                    
+                    if not user_text:
+                        self.voice.speak("Anlayamadim, tekrar soyler misin?")
+                        continue
+                    
+                    print(f"[SIZ] {user_text}")
+                    self._process(user_text)
+                else:
+                    # Wake word yoksa, konsoldan devam et
+                    print(f"[DINLE] {text}")
+                    
             except KeyboardInterrupt:
                 self.stop()
                 break
             except Exception as e:
-                print(f"❌ Hata: {e}")
+                print(f"[HATA] {e}")
                 time.sleep(1)
     
-    def _wait_for_wake_word(self):
-        """Wake word bekle"""
-        while self.running:
-            text = self.listener.listen(timeout=5)
-            text_lower = text.lower()
-            
-            for word in WAKE_WORDS:
-                if word in text_lower:
-                    print(f"🎯 Wake word: {text}")
-                    return
-    
-    def _check_commands(self, text):
-        """Özel komutları kontrol et"""
+    def _process(self, text):
+        """Mesaji isle"""
         text_lower = text.lower()
         
-        # Temizle
-        if any(w in text_lower for w in ['temizle', 'sıfırla', 'unut']):
+        # Komut kontrolu
+        if any(w in text_lower for w in ['temizle', 'sifirla', 'unut']):
             self.brain.reset()
-            self.voice.speak("Sohbet geçmişini temizledim.")
-            return True
+            self.voice.speak("Sohbet gecmisini temizledim.")
+            return
         
-        # Kapat
-        if any(w in text_lower for w in ['kapat', 'güle güle', 'hoşça kal']):
-            self.voice.speak("Güle güle! İyi günler.")
+        if any(w in text_lower for w in ['kapat', 'gule gule', 'hoscakal']):
+            self.voice.speak("Gule gule! Iyi gunler.")
             self.stop()
-            return True
+            return
         
-        # Saat
-        if any(w in text_lower for w in ['saat', 'zaman', 'kaç']):
+        if any(w in text_lower for w in ['saat', 'zaman', 'kac']):
             from datetime import datetime
             now = datetime.now().strftime("%H:%M")
-            self.voice.speak(f"Şu saat {now}")
-            return True
+            self.voice.speak(f"Saat {now}")
+            return
         
-        # Tarih
-        if any(w in text_lower for w in ['tarih', 'bugün', 'gün']):
+        if any(w in text_lower for w in ['tarih', 'bugun', 'gun']):
             from datetime import datetime
             today = datetime.now().strftime("%d %B %Y")
-            self.voice.speak(f"Bugün {today}")
-            return True
+            self.voice.speak(f"Bugun {today}")
+            return
         
-        return False
+        # LLM'e gonder
+        print("[DUSUN] Dusunuyorum...")
+        response = self.brain.think(text)
+        self.voice.speak(response)
     
     def stop(self):
-        """Asistanı durdur"""
         self.running = False
-        print("\n👋 Asistan kapatıldı")
+        print("\n[GULE] Asistan kapatildi")
 
 # ============================================
-# BAŞLAT
+# BASLAT
 # ============================================
 
 if __name__ == "__main__":
-    print("\n🚀 Asistan başlatılıyor...")
-    print("   Durdurmak için: Ctrl+C")
-    print("   veya 'güle güle' diyebilirsiniz\n")
+    print("\n[baslat] Asistan baslatiliyor...")
+    print("   Durdurmak icin: Ctrl+C")
+    print("   veya 'gule gule' diyebilirsiniz\n")
     
     assistant = Assistant()
     assistant.start()

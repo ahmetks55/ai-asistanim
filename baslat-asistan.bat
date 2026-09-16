@@ -1,28 +1,28 @@
 @echo off
 chcp 65001 >nul
-title AI Asistanım - Sohbet Asistanı
+title AI Asistanim - Sohbet Asistani
 
 echo.
 echo ========================================
-echo   AI ASİSTANIM - SOHBET ASİSTANI
+echo   AI ASISTANIM - SOHBET ASISTANI
 echo ========================================
 echo.
 
-:: Ollama çalışıyor mu kontrol et
+:: Ollama calisiyor mu kontrol et
 tasklist /FI "IMAGENAME eq ollama.exe" 2>NUL | find /I "ollama.exe" >NUL
 if errorlevel 1 (
-    echo [!] Ollama çalışmıyor, başlatılıyor...
+    echo [!] Ollama calismiyor, baslatiliyor...
     start "" "C:\Users\ASUS\AppData\Local\Programs\Ollama\ollama.exe" serve
     timeout /t 5 /nobreak >nul
 )
 
-echo [OK] Ollama çalışıyor
+echo [OK] Ollama calisiyor
 echo.
 
-:: Asistanı başlat
-echo Asistan başlatılıyor...
-echo Durdurmak için Ctrl+C veya "güle güle" diyebilirsiniz
+:: Asistani baslat
+echo Asistan baslatiliyor...
+echo Durdurmak icin Ctrl+C veya "gule gule" diyebilirsiniz
 echo.
-python chat_assistant.py
+"C:\Users\ASUS\AppData\Local\Programs\Python\Python312\python.exe" chat_assistant.py
 
 pause
