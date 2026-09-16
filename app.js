@@ -1310,6 +1310,7 @@ window.filterModels = function() {
   
   const options = document.querySelectorAll('.dropdown-option');
   
+  // Önce tüm modelleri filtrele
   options.forEach(opt => {
     const id = opt.dataset.key;
     const m = MODEL_DB[id];
@@ -1329,6 +1330,13 @@ window.filterModels = function() {
     const matchesFilters = matchesProvider && matchesPrice && matchesRating && matchesCap;
     
     opt.style.display = (matchesSearch && matchesFilters) ? '' : 'none';
+  });
+  
+  // Sonra grup başlıklarını kontrol et: içinde görünür model yoksa başlığı da gizle
+  document.querySelectorAll('.dropdown-group-label').forEach(label => {
+    const provider = label.dataset.provider;
+    const visibleModels = document.querySelectorAll(`.dropdown-option[data-provider="${provider}"]:not([style*="display: none"])`);
+    label.style.display = visibleModels.length > 0 ? '' : 'none';
   });
   
   // Sağlayıcı filtresini doldur (ilk açılışta)
