@@ -1278,6 +1278,15 @@ function initDropdown() {
   });
 }
 
+// Seçili modeli göster
+function updateSelectedDisplay() {
+  const m = MODEL_DB[selectedModel];
+  if (m) {
+    selectedText.textContent = m.name;
+    selectedProvider.textContent = m.provider;
+  }
+}
+
 // Model seçimi ve hafızaya kayıt
 window.selectModel = function(id) {
   selectedModel = id;
@@ -1286,15 +1295,15 @@ window.selectModel = function(id) {
   dropdownEl.classList.remove('open');
   hideTooltip();
   
-  document.querySelectorAll('.model-option').forEach(o => o.classList.remove('active'));
-  const activeOpt = document.querySelector(`.model-option[data-key="${id}"]`);
+  document.querySelectorAll('.dropdown-option').forEach(o => o.classList.remove('active'));
+  const activeOpt = document.querySelector(`.dropdown-option[data-key="${id}"]`);
   if (activeOpt) activeOpt.classList.add('active');
 };
 
 // Model filtreleme (İsim, Puan, Yetenek)
 window.filterModels = function(q) {
   const query = q.toLowerCase();
-  const options = document.querySelectorAll('.model-option');
+  const options = document.querySelectorAll('.dropdown-option');
   
   options.forEach(opt => {
     const id = opt.dataset.key;
