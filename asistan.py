@@ -18,8 +18,9 @@ import pygame
 pygame.mixer.init()
 
 # AYARLAR
-OLLAMA_URL = "http://localhost:11434"
-LLM_MODEL = "qwen2.5:0.5b"
+BRIDGE_URL = "http://localhost:8788"  # Köprü sunucusu
+LLM_PROVIDER = "nara"
+LLM_MODEL = "agnes-2.5-flash"
 TTS_VOICE = "tr-TR-AhmetNeural"  # Turkce erkek ses
 
 # SOHBET
@@ -100,22 +101,38 @@ def listen_keyboard():
         return None
 
 def think(text):
-    """LLM'e sor"""
+    """Köprü üzerinden AI'a sor"""
     history.append({"role": "user", "content": text})
-    messages = [{"role": "system", "content": "Sen yardimci bir asistansin. Turkce kisa net yanit ver. 1-2 cumle."}]
-    messages.extend(history[-6:])
+    messages = [
+        {"role": "system", "content": "KESINLIKLE Turkce yanit ver. Ingilizce kullanma. Kisa ve net ol. 1-2 cumle."},
+        *history[-6:]
+    ]
     
     try:
         r = requests.post(
-            f"{OLLAMA_URL}/api/chat",
-            json={"model": LLM_MODEL, "messages": messages, "stream": False},
-            timeout=60
+            f"{BRIDGE_URL}/chat",
+            json={
+                "provider": LLM_PROVIDER,
+                "model": LLM_MODEL,
+                "messages": messages
+            },
+            timeout=30
         )
-        reply = r.json()['message']['content']
-        history.append({"role": "assistant", "content": reply})
-        return reply
+        data = r.json()
+        
+        if 'reply' in data:
+            reply = data['reply']
+            history.append({"role": "assistant", "content": reply})
+            return reply
+        elif 'error' in data:
+            return f"Hata: {data['error']}"
+        else:
+            return "Yanit alinamadi."
+            
     except requests.exceptions.ConnectionError:
-        return "Ollama calismiyor. 'ollama serve' calistirin."
+        return "Köprü calismiyor. 'node server.js' calistirin."
+    except requests.exceptions.Timeout:
+        return "Cok uzun surdu. Tekrar dener misin?"
     except Exception as e:
         return f"Hata: {str(e)}"
 
@@ -129,6 +146,9 @@ print("  - Direkt yazarak konusun")
 print("  - 'saat kac' -> saati soyler")
 print("  - 'guule guule' -> kapatir")
 print("  - Ctrl+C ile cikis")
+print()
+print("  NOT: Köprü sunucusu calismali!")
+print("  node server.js  (ayri pencerede)")
 print()
 
 # Mikrofon testi
