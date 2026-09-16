@@ -1425,12 +1425,12 @@ function populateFilterOptions() {
 }
 
 window.toggleFilterPanel = function() {
-  const panel = document.getElementById('filterPanel');
+  const panel = document.getElementById('filterDropdown');
   const btn = document.getElementById('filterToggleBtn');
   if (panel.style.display === 'none') {
     panel.style.display = 'flex';
     btn.classList.add('active');
-    populateFilterOptions(); // Açılırken filtreleri doldur
+    populateFilterOptions();
   } else {
     panel.style.display = 'none';
     btn.classList.remove('active');

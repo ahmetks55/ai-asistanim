@@ -38,14 +38,14 @@
                 <div class="dropdown-search">
                   <input type="text" id="modelSearch" placeholder="Model ara (isim, @saglayici, $fiyat, #puan, #yetenek)" oninput="filterModels(this.value)">
                 </div>
-                <button class="filter-toggle-btn" id="filterToggleBtn" onclick="toggleFilterPanel()">⚙ Filtreler</button>
+                <button class="filter-toggle-btn" id="filterToggleBtn" onclick="toggleFilterDropdown()">⚙ Filtre</button>
               </div>
               
               <!-- Aktif Filtreler Çubuğu -->
               <div class="active-filters-bar" id="activeFiltersBar" style="display:none;"></div>
 
-              <!-- Filtre Paneli -->
-              <div class="filter-panel" id="filterPanel" style="display:none;">
+              <!-- Filtre Dropdown (Panel yerine) -->
+              <div class="filter-dropdown" id="filterDropdown" style="display:none;">
                 <div class="filter-section">
                   <h4>🏢 Sağlayıcı</h4>
                   <div class="filter-options" id="filterProviderOptions"></div>
@@ -59,7 +59,7 @@
                   </div>
                 </div>
                 <div class="filter-section">
-                  <h4>⭐ Puan Aralığı</h4>
+                  <h4>⭐ Puan</h4>
                   <div class="filter-options">
                     <label class="filter-check"><input type="checkbox" value="9" onchange="filterModels()"> 9 - 10 (En İyiler)</label>
                     <label class="filter-check"><input type="checkbox" value="7" onchange="filterModels()"> 7 - 8 (İyi)</label>

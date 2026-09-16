@@ -573,8 +573,8 @@ textarea::placeholder {
   line-height: 1;
 }
 
-/* Filter Panel */
-.filter-panel {
+/* Filter Dropdown */
+.filter-dropdown {
   padding: 12px;
   border-bottom: 1px solid var(--border);
   background: var(--surface1);
