@@ -541,90 +541,94 @@ textarea::placeholder {
   color: white;
 }
 
+/* Active Filters Bar */
+.active-filters-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 6px 12px;
+  background: rgba(99, 102, 241, 0.1);
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  z-index: 9;
+}
+.active-filter-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--primary);
+  color: white;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 11px;
+}
+.active-filter-tag button {
+  background: none;
+  border: none;
+  color: white;
+  cursor: pointer;
+  font-size: 12px;
+  padding: 0;
+  line-height: 1;
+}
+
 /* Filter Panel */
 .filter-panel {
-  padding: 10px;
+  padding: 12px;
   border-bottom: 1px solid var(--border);
   background: var(--surface1);
   position: sticky;
-  top: 38px;
+  top: 0;
   z-index: 9;
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
   gap: 12px;
   animation: slideDown 0.2s ease;
 }
-@keyframes slideDown {
-  from { opacity: 0; transform: translateY(-10px); }
-  to { opacity: 1; transform: translateY(0); }
-}
 
-.filter-section {
-  flex: 1;
-  min-width: 140px;
-}
-.filter-section label {
-  display: block;
-  font-size: 10px;
+.filter-section h4 {
+  font-size: 12px;
   font-weight: 600;
   color: var(--text2);
-  margin-bottom: 6px;
+  margin: 0 0 8px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
-.filter-section select {
-  width: 100%;
-  background: var(--surface2);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: 6px 10px;
-  color: var(--text);
-  font-size: 11px;
-  cursor: pointer;
-}
-.filter-section select:focus {
-  outline: none;
-  border-color: var(--primary);
-}
 
-/* Filter Chips */
-.filter-chips {
+.filter-options {
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
   gap: 6px;
 }
-.filter-chip {
-  background: var(--surface2);
-  border: 1px solid var(--border);
-  border-radius: 16px;
-  padding: 4px 12px;
-  color: var(--text2);
-  font-size: 11px;
+
+.filter-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   cursor: pointer;
-  transition: all 0.15s;
+  font-size: 12px;
+  color: var(--text);
+  padding: 4px 0;
 }
-.filter-chip:hover {
-  border-color: var(--primary);
+.filter-check input {
+  width: 14px;
+  height: 14px;
+  accent-color: var(--primary);
+  cursor: pointer;
+}
+.filter-check:hover {
   color: var(--primary);
 }
-.filter-chip.active {
-  background: var(--primary);
-  border-color: var(--primary);
-  color: white;
-}
 
-/* Capability Chips Container */
-#capabilityChips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-/* Filter Clear Button */
-.filter-clear-btn {
-  width: 100%;
+.filter-actions {
   margin-top: 8px;
-  padding: 6px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}
+.btn-clear {
+  width: 100%;
+  padding: 8px;
   background: transparent;
   border: 1px solid var(--border);
   border-radius: 6px;
@@ -632,7 +636,7 @@ textarea::placeholder {
   font-size: 11px;
   cursor: pointer;
 }
-.filter-clear-btn:hover {
+.btn-clear:hover {
   border-color: var(--error);
   color: var(--error);
 }
