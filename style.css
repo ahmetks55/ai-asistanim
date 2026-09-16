@@ -455,7 +455,7 @@ textarea::placeholder {
   border-radius: 3px;
 }
 
-/* Model Dropdown Search */
+/* Model Dropdown Search & Filters */
 .dropdown-search {
   padding: 8px;
   border-bottom: 1px solid var(--border);
@@ -475,6 +475,45 @@ textarea::placeholder {
   outline: none;
 }
 .dropdown-search input:focus {
+  border-color: var(--primary);
+}
+
+/* Dropdown Toolbar (Search + Filters) */
+.dropdown-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 8px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface1);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+.dropdown-search {
+  flex: 1;
+  min-width: 180px;
+  padding: 0;
+  border: none;
+}
+.dropdown-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+.filter-group select {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px 10px;
+  color: var(--text);
+  font-size: 11px;
+  cursor: pointer;
+  min-width: 120px;
+}
+.filter-group select:focus {
+  outline: none;
   border-color: var(--primary);
 }
 /* Settings Info Box */

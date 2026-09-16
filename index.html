@@ -27,19 +27,60 @@
 
     <div class="input-area">
       <div class="model-bar">
-        <div class="custom-dropdown" id="customDropdown">
-          <button class="dropdown-selected" id="dropdownSelected">
-            <span class="selected-text">Agnes 2.5 Flash</span>
-            <span class="selected-provider">NaraRouter</span>
-            <span class="dropdown-arrow">▼</span>
-          </button>
-          <div class="dropdown-list" id="dropdownList">
-            <div class="dropdown-search">
-              <input type="text" id="modelSearch" placeholder="Model ara (puan, yetenek...)" oninput="filterModels(this.value)">
+          <div class="custom-dropdown" id="customDropdown">
+            <button class="dropdown-selected" id="dropdownSelected">
+              <span class="selected-text">Agnes 2.5 Flash</span>
+              <span class="selected-provider">NaraRouter</span>
+              <span class="dropdown-arrow">▼</span>
+            </button>
+            <div class="dropdown-list" id="dropdownList">
+              <div class="dropdown-toolbar">
+                <div class="dropdown-search">
+                  <input type="text" id="modelSearch" placeholder="Model ara (puan, yetenek...)" oninput="filterModels(this.value)">
+                </div>
+                <div class="dropdown-filters">
+                  <div class="filter-group">
+                    <select id="filterProvider" onchange="filterModels()">
+                      <option value="">Tüm Sağlayıcılar</option>
+                    </select>
+                  </div>
+                  <div class="filter-group">
+                    <select id="filterPrice" onchange="filterModels()">
+                      <option value="">Tüm Fiyatlar</option>
+                      <option value="ucretsiz">Ücretsiz</option>
+                      <option value="deneme">Deneme</option>
+                      <option value="ucretli">Ücretli</option>
+                    </select>
+                  </div>
+                  <div class="filter-group">
+                    <select id="filterRating" onchange="filterModels()">
+                      <option value="">Tüm Puanlar</option>
+                      <option value="9">9-10 Puan</option>
+                      <option value="7">7-8 Puan</option>
+                      <option value="5">5-6 Puan</option>
+                    </select>
+                  </div>
+                  <div class="filter-group">
+                    <select id="filterCap" onchange="filterModels()">
+                      <option value="">Tüm Yetenekler</option>
+                      <option value="Kod Yazma">Kod Yazma</option>
+                      <option value="Kod Analizi">Kod Analizi</option>
+                      <option value="Matematik">Matematik</option>
+                      <option value="Çeviri">Çeviri</option>
+                      <option value="Görsel Anlama">Görsel Anlama</option>
+                      <option value="Uzun Bağlam">Uzun Bağlam</option>
+                      <option value="Mantıksal Çıkarım">Mantıksal Çıkarım</option>
+                      <option value="Yaratıcı Yazarlık">Yaratıcı Yazarlık</option>
+                      <option value="Araştırma">Araştırma</option>
+                      <option value="Veri Analizi">Veri Analizi</option>
+                      <option value="Sohbet">Sohbet</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+              <div id="modelOptions"></div>
             </div>
-            <div id="modelOptions"></div>
           </div>
-        </div>
         <div class="model-tooltip" id="modelTooltip"></div>
       </div>
       <div class="input-row">

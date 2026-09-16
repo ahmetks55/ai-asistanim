@@ -1300,9 +1300,14 @@ window.selectModel = function(id) {
   if (activeOpt) activeOpt.classList.add('active');
 };
 
-// Model filtreleme (İsim, Puan, Yetenek)
-window.filterModels = function(q) {
-  const query = q.toLowerCase();
+// Model filtreleme (İsim, Puan, Yetenek, Sağlayıcı, Fiyat)
+window.filterModels = function() {
+  const query = document.getElementById('modelSearch')?.value.toLowerCase() || '';
+  const providerFilter = document.getElementById('filterProvider')?.value || '';
+  const priceFilter = document.getElementById('filterPrice')?.value || '';
+  const ratingFilter = document.getElementById('filterRating')?.value || '';
+  const capFilter = document.getElementById('filterCap')?.value || '';
+  
   const options = document.querySelectorAll('.dropdown-option');
   
   options.forEach(opt => {
@@ -1312,14 +1317,38 @@ window.filterModels = function(q) {
     const p = PROVIDERS[m.provider] || { name: '' };
     
     const matchesName = m.name.toLowerCase().includes(query);
-    const matchesProvider = p.name.toLowerCase().includes(query);
+    const matchesProvider = !providerFilter || p.name === providerFilter;
+    const matchesPrice = !priceFilter || m.price === priceFilter;
+    const matchesRating = !ratingFilter || (m.rating >= parseInt(ratingFilter) && m.rating < parseInt(ratingFilter) + 3);
+    const matchesCap = !capFilter || (m.caps && m.caps.includes(capFilter));
     const matchesCaps = m.caps.some(c => c.toLowerCase().includes(query));
-    const matchesRating = query.includes('puan') && m.rating.toString().includes(query.replace('puan', '').trim());
+    const matchesRatingQuery = query.includes('puan') && m.rating.toString().includes(query.replace('puan', '').trim());
     const matchesRatingDirect = !isNaN(query) && query !== '' && m.rating.toString() === query;
 
-    opt.style.display = (matchesName || matchesProvider || matchesCaps || matchesRating || matchesRatingDirect) ? '' : 'none';
+    const matchesSearch = (matchesName || matchesProvider || matchesCaps || matchesRatingQuery || matchesRatingDirect);
+    const matchesFilters = matchesProvider && matchesPrice && matchesRating && matchesCap;
+    
+    opt.style.display = (matchesSearch && matchesFilters) ? '' : 'none';
   });
+  
+  // Sağlayıcı filtresini doldur (ilk açılışta)
+  if (!document.getElementById('filterProvider').dataset.populated) {
+    populateProviderFilter();
+  }
 };
+
+function populateProviderFilter() {
+  const select = document.getElementById('filterProvider');
+  if (!select) return;
+  const providers = [...new Set(Object.values(MODEL_DB).map(m => m.provider))].sort();
+  providers.forEach(prov => {
+    const opt = document.createElement('option');
+    opt.value = prov;
+    opt.textContent = prov;
+    select.appendChild(opt);
+  });
+  select.dataset.populated = 'true';
+}
 
 
 // Dropdown aç/kapa
