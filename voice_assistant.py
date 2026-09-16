@@ -60,9 +60,9 @@ CONFIG = {
     'tts_volume': 0.9,               # Ses seviyesi
     'api_key': '',                   # API key (opsiyonel)
     'model': 'nara:agnes-2.5-flash', # AI modeli
-    'use_local_llm': False,          # Yerel LLM kullan (Ollama)
+    'use_local_llm': True,           # Yerel LLM kullan (Ollama)
     'ollama_url': 'http://localhost:11434',  # Ollama URL
-    'local_model': 'qwen2.5:3b',    # Yerel LLM modeli
+    'local_model': 'qwen2.5:0.5b',  # Küçük model (4GB RAM için uygun)
 }
 
 # ============================================
