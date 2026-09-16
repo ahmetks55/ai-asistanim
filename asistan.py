@@ -1,40 +1,52 @@
 """
-AI Asistan - Ses + Klavye
-Mikrofon calismazsa klavye ile devam eder
+AI Asistan - Turkce Sesli
+edge-tts ile Turkce konusan asistan
 """
 
-import os, sys, time, json, re
+import os, sys, time, json, re, asyncio
 
 if sys.platform == 'win32':
     os.system('chcp 65001 >nul 2>&1')
     import io
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 
-import pyttsx3
+import edge_tts
 import requests
+import pygame
+
+# Pygame mixer baslat
+pygame.mixer.init()
 
 # AYARLAR
 OLLAMA_URL = "http://localhost:11434"
 LLM_MODEL = "qwen2.5:0.5b"
-
-# TTS
-tts = pyttsx3.init()
-tts.setProperty('rate', 160)
-tts.setProperty('volume', 1.0)  # Max ses
+TTS_VOICE = "tr-TR-AhmetNeural"  # Turkce erkek ses
 
 # SOHBET
 history = []
 
 def speak(text):
-    # Sadece markdown temizle, Turkce karakterleri koru
+    """Turkce sesli oku"""
     clean = re.sub(r'[*#`_~>|]', '', text)
     clean = re.sub(r'\[([^\]]+)\]\([^)]+\)', r'\1', clean)
     clean = re.sub(r'\s+', ' ', clean).strip()
     if not clean:
         return
+    
     print(f"\n[ASISTAN] {clean}")
-    tts.say(clean)
-    tts.runAndWait()
+    
+    try:
+        tmp = os.path.join(os.environ['TEMP'], 'asistan_ses.mp3')
+        communicate = edge_tts.Communicate(clean, TTS_VOICE)
+        asyncio.run(communicate.save(tmp))
+        
+        # pygame ile cal
+        pygame.mixer.music.load(tmp)
+        pygame.mixer.music.play()
+        while pygame.mixer.music.get_busy():
+            time.sleep(0.1)
+    except Exception as e:
+        print(f"[SES HATA] {e}")
 
 def listen_mic():
     """Mikrofon ile dinle"""
@@ -81,6 +93,7 @@ def listen_keyboard():
         return None
 
 def think(text):
+    """LLM'e sor"""
     history.append({"role": "user", "content": text})
     messages = [{"role": "system", "content": "Sen yardimci bir asistansin. Turkce kisa net yanit ver. 1-2 cumle."}]
     messages.extend(history[-6:])
@@ -89,7 +102,7 @@ def think(text):
         r = requests.post(
             f"{OLLAMA_URL}/api/chat",
             json={"model": LLM_MODEL, "messages": messages, "stream": False},
-            timeout=30
+            timeout=60
         )
         reply = r.json()['message']['content']
         history.append({"role": "assistant", "content": reply})
@@ -101,25 +114,25 @@ def think(text):
 
 # ANA PROGRAM
 print("\n" + "="*50)
-print("   AI ASISTAN - SES + KLAVYE")
+print("   AI ASISTAN - TURKCE SESLI")
 print("="*50)
 print()
-print("  SECENEKLER:")
-print("  1. Mikrofon ile konusun")
-print("  2. Klavye ile yazin")
-print("  3. Ctrl+C ile cikis")
+print("  Komutlar:")
+print("  - Direkt yazarak konusun")
+print("  - 'saat kac' -> saati soyler")
+print("  - 'guule guule' -> kapatir")
+print("  - Ctrl+C ile cikis")
 print()
 
-# Once mikrofonu dene
-print("[TEST] Mikrofon testi yapiliyor...")
+# Mikrofon testi
+print("[TEST] Mikrofon testi...")
 mic_text = listen_mic()
+use_mic = bool(mic_text)
 
-if mic_text:
-    print(f"[OK] Mikrofon calisiyor! Algilanan: {mic_text}")
-    use_mic = True
+if use_mic:
+    print(f"[OK] Mikrofon calisiyor: {mic_text}")
 else:
-    print("[UYARI] Mikrofon calismadi. Klaleyde moduna geciliyor.")
-    use_mic = False
+    print("[UYARI] Mikrofon calismadi. Klavye modu.")
 
 speak("Merhaba! Ben AI asistaninizim. Size nasil yardimci olabilirim?")
 
@@ -133,7 +146,6 @@ while True:
             text = listen_keyboard()
         
         if not text:
-            print("[BOS] Bir sey algılanamadi")
             continue
         
         print(f"[SIZ] {text}")
@@ -150,26 +162,26 @@ while True:
             speak(f"Bugun {datetime.now().strftime('%d %B %Y')}")
             continue
         
-        if any(w in text_lower for w in ['gule gule', 'hosca kal', 'bay bay', 'kendine iyi bak']):
-            speak("Gule gule! Iyi gunler dilerim.")
+        if any(w in text_lower for w in ['guule guule', 'hosca kal', 'bay bay']):
+            speak("Guule guule! Iyi gunler dilerim.")
             break
         
-        if any(w in text_lower for w in ['tesekkur', 'sagol', 'sag ol']):
-            speak("Rica ederim! Baska bir sey yardimci olabilir miyim?")
+        if any(w in text_lower for w in ['tesekkur', 'sagol']):
+            speak("Rica ederim!")
             continue
         
-        if any(w in text_lower for w in ['kimsin', 'adın ne', 'sen kimsin', 'kimsin sen']):
-            speak("Ben AI asistaninizim. Size yardimci olmak icin buradayim.")
+        if any(w in text_lower for w in ['kimsin', 'adın ne']):
+            speak("Ben AI asistaninizim.")
             continue
         
-        if any(w in text_lower for w in ['klavye', 'yazarak', 'mod degis']):
+        if any(w in text_lower for w in ['klavye', 'yazarak']):
             use_mic = False
-            speak("Klavye moduna gectim. Artik yazarak konusabilirsiniz.")
+            speak("Klavye moduna gectim.")
             continue
         
-        if any(w in text_lower for w in ['mikrofon', 'sesli', 'konusarak']):
+        if any(w in text_lower for w in ['mikrofon', 'sesli']):
             use_mic = True
-            speak("Mikrofon moduna gectim. Artik sesli konusabilirsiniz.")
+            speak("Mikrofon moduna gectim.")
             continue
         
         # LLM'e gonder
@@ -178,7 +190,7 @@ while True:
         speak(response)
         
     except KeyboardInterrupt:
-        speak("Gule gule! Kapatiliyorum.")
+        speak("Guule guule! Kapatiliyorum.")
         break
     except Exception as e:
         print(f"[HATA] {e}")
