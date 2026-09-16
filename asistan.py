@@ -36,7 +36,8 @@ def speak(text):
     print(f"\n[ASISTAN] {clean}")
     
     try:
-        tmp = os.path.join(os.environ['TEMP'], 'asistan_ses.mp3')
+        # Her seferinde farkli dosya adi
+        tmp = os.path.join(os.environ['TEMP'], f'asistan_{int(time.time()*1000)}.mp3')
         communicate = edge_tts.Communicate(clean, TTS_VOICE)
         asyncio.run(communicate.save(tmp))
         
@@ -45,6 +46,12 @@ def speak(text):
         pygame.mixer.music.play()
         while pygame.mixer.music.get_busy():
             time.sleep(0.1)
+        
+        # Temizle
+        try:
+            os.remove(tmp)
+        except:
+            pass
     except Exception as e:
         print(f"[SES HATA] {e}")
 
