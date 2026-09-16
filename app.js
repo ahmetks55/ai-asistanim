@@ -1300,14 +1300,45 @@ window.selectModel = function(id) {
   if (activeOpt) activeOpt.classList.add('active');
 };
 
-// Model filtreleme (İsim, Puan, Yetenek, Sağlayıcı, Fiyat)
-window.filterModels = function() {
-  const query = document.getElementById('modelSearch')?.value.toLowerCase() || '';
-  const providerFilter = document.getElementById('filterProvider')?.value || '';
-  const priceFilter = document.getElementById('filterPrice')?.value || '';
-  const ratingFilter = document.getElementById('filterRating')?.value || '';
-  const capFilter = document.getElementById('filterCap')?.value || '';
+// Model filtreleme (Tek input: @sağlayıcı, $fiyat, #puan, #yetenek, isim)
+window.filterModels = function(input) {
+  const query = (input?.value || input || '').toLowerCase().trim();
   
+  // Filtreleri parse et
+  let providerFilter = '';
+  let priceFilter = '';
+  let ratingFilter = '';
+  let capFilter = '';
+  let searchText = query;
+
+  // @sağlayıcı
+  const providerMatch = query.match(/@(\S+)/);
+  if (providerMatch) { providerFilter = providerMatch[1]; searchText = searchText.replace(providerMatch[0], '').trim(); }
+
+  // $fiyat (free/deneme/paid veya ücretsiz/deneme/ücretli)
+  const priceMatch = query.match(/\$(\S+)/);
+  if (priceMatch) { 
+    const p = priceMatch[1];
+    if (['free','ücretsiz','ucretsiz'].includes(p)) priceFilter = 'ucretsiz';
+    else if (['trial','deneme'].includes(p)) priceFilter = 'deneme';
+    else if (['paid','ücretli','ucretli'].includes(p)) priceFilter = 'ucretli';
+    searchText = searchText.replace(priceMatch[0], '').trim();
+  }
+
+  // #puan (9, 7, 5...)
+  const ratingMatch = query.match(/#(\d+)/);
+  if (ratingMatch) { ratingFilter = ratingMatch[1]; searchText = searchText.replace(ratingMatch[0], '').trim(); }
+
+  // #yetenek (kod, matematik...)
+  const capMatch = query.match(/#([^#\s@$]+)/);
+  if (capMatch && !ratingMatch) { capFilter = capMatch[1]; searchText = searchText.replace(capMatch[0], '').trim(); }
+  
+  // Eğer @ $ # yoksa ve sadece sayı girildiyse puan filtresi olarak kabul et
+  if (!providerFilter && !priceFilter && !ratingFilter && !capFilter && !isNaN(query) && query !== '') {
+    ratingFilter = query;
+    searchText = '';
+  }
+
   const options = document.querySelectorAll('.dropdown-option');
   
   // Önce tüm modelleri filtrele
@@ -1317,46 +1348,29 @@ window.filterModels = function() {
     if (!m) return;
     const p = PROVIDERS[m.provider] || { name: '' };
     
-    const matchesName = m.name.toLowerCase().includes(query);
-    const matchesProvider = !providerFilter || p.name === providerFilter;
+    const matchesName = m.name.toLowerCase().includes(searchText);
+    const matchesDesc = (m.desc || '').toLowerCase().includes(searchText);
+    const matchesProvider = !providerFilter || p.name.toLowerCase().includes(providerFilter);
     const matchesPrice = !priceFilter || m.price === priceFilter;
     const matchesRating = !ratingFilter || (m.rating >= parseInt(ratingFilter) && m.rating < parseInt(ratingFilter) + 3);
-    const matchesCap = !capFilter || (m.caps && m.caps.includes(capFilter));
-    const matchesCaps = m.caps.some(c => c.toLowerCase().includes(query));
-    const matchesRatingQuery = query.includes('puan') && m.rating.toString().includes(query.replace('puan', '').trim());
-    const matchesRatingDirect = !isNaN(query) && query !== '' && m.rating.toString() === query;
+    const matchesCap = !capFilter || (m.caps && m.caps.some(c => c.toLowerCase().includes(capFilter)));
+    const matchesCaps = m.caps.some(c => c.toLowerCase().includes(searchText));
+    const matchesRatingQuery = searchText.includes('puan') && m.rating.toString().includes(searchText.replace('puan', '').trim());
+    const matchesRatingDirect = !isNaN(searchText) && searchText !== '' && m.rating.toString() === searchText;
 
-    const matchesSearch = (matchesName || matchesProvider || matchesCaps || matchesRatingQuery || matchesRatingDirect);
+    const matchesSearch = (matchesName || matchesDesc || matchesCaps || matchesRatingQuery || matchesRatingDirect);
     const matchesFilters = matchesProvider && matchesPrice && matchesRating && matchesCap;
     
     opt.style.display = (matchesSearch && matchesFilters) ? '' : 'none';
   });
   
-  // Sonra grup başlıklarını kontrol et: içinde görünür model yoksa başlığı da gizle
+  // Sonra grup başlıklarını kontrol et
   document.querySelectorAll('.dropdown-group-label').forEach(label => {
     const provider = label.dataset.provider;
     const visibleModels = document.querySelectorAll(`.dropdown-option[data-provider="${provider}"]:not([style*="display: none"])`);
     label.style.display = visibleModels.length > 0 ? '' : 'none';
   });
-  
-  // Sağlayıcı filtresini doldur (ilk açılışta)
-  if (!document.getElementById('filterProvider').dataset.populated) {
-    populateProviderFilter();
-  }
 };
-
-function populateProviderFilter() {
-  const select = document.getElementById('filterProvider');
-  if (!select) return;
-  const providers = [...new Set(Object.values(MODEL_DB).map(m => m.provider))].sort();
-  providers.forEach(prov => {
-    const opt = document.createElement('option');
-    opt.value = prov;
-    opt.textContent = prov;
-    select.appendChild(opt);
-  });
-  select.dataset.populated = 'true';
-}
 
 
 // Dropdown aç/kapa
