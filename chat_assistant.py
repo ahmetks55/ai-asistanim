@@ -36,14 +36,7 @@ class Voice:
         self.engine = pyttsx3.init()
         self.engine.setProperty('rate', 160)
         self.engine.setProperty('volume', 1.0)
-        
-        # Turkce ses ara
-        voices = self.engine.getProperty('voices')
-        for v in voices:
-            if 'turkish' in v.name.lower() or 'tr' in v.id.lower():
-                self.engine.setProperty('voice', v.id)
-                print(f"[OK] Turkce ses: {v.name}")
-                break
+        print("[OK] Ses motoru hazir")
     
     def speak(self, text):
         clean = self.clean(text)
@@ -53,11 +46,7 @@ class Voice:
     
     def clean(self, text):
         import re
-        # Emojileri temizle
-        text = re.sub(r'[^\w\s.,!? Turkce karakter]', '', text)
-        # Markdown temizle
-        text = re.sub(r'[*#`_~>|]', '', text)
-        text = re.sub(r'\[([^\]]+)\]\([^)]+\)', r'\1', text)
+        text = re.sub(r'[^\w\s.,!?]', '', text)
         text = re.sub(r'\s+', ' ', text).strip()
         return text
 
@@ -208,7 +197,8 @@ class Assistant:
     def start(self):
         self.running = True
         
-        self.voice.speak("Merhaba! Ben AI asistaninizim. Bana seslenebilirsiniz.")
+        print("[BASLAT] Asistan baslatiliyor...")
+        self.voice.speak("Merhaba! Ben AI asistaninizim.")
         
         while self.running:
             try:
@@ -224,8 +214,9 @@ class Assistant:
                     continue
                 
                 # Wake word bekle
-                print("\n[BEKLE] 'Hey Jarvis' bekleniyor...")
+                print("[DINLE] 'Hey Jarvis' bekleniyor...")
                 text = self.listener.listen(timeout=10)
+                print(f"[SONUC] '{text}'")
                 
                 if not text:
                     continue
