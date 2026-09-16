@@ -1228,15 +1228,18 @@ const selectedProvider = dropdownSelected.querySelector('.selected-provider');
 function initDropdown() {
   const optionsContainer = document.getElementById('modelOptions');
   if (!optionsContainer) {
-    // Eğer modelOptions henüz yoksa (ilk açılış), oluştur
     const searchBar = dropdownList.querySelector('.dropdown-search')?.outerHTML || '';
     dropdownList.innerHTML = searchBar + '<div id="modelOptions"></div>';
-    // Tekrar dene
     initDropdown();
     return;
   }
   
   updateSelectedDisplay();
+
+  if (!MODEL_DB || Object.keys(MODEL_DB).length === 0) {
+    optionsContainer.innerHTML = '<div style="padding:20px;color:red;text-align:center;">❌ MODEL_DB BOŞ! Dosya yüklenemedi.</div>';
+    return;
+  }
 
   const groups = {};
   const groupOrder = [];
@@ -1266,9 +1269,9 @@ function initDropdown() {
 
   document.querySelectorAll('.dropdown-option').forEach(opt => {
     opt.addEventListener('mouseenter', (e) => {
-      const key = opt.dataset.key;
-      const m = MODEL_DB[key];
-      if (m) showTooltip(m, e);
+      const k = opt.dataset.key;
+      const md = MODEL_DB[k];
+      if (md) showTooltip(md, e);
     });
     opt.addEventListener('mousemove', moveTooltip);
     opt.addEventListener('mouseleave', hideTooltip);
