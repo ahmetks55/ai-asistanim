@@ -12,12 +12,9 @@ function loadKeys() {
 function saveKeys(k) { fs.writeFileSync(CONFIG, JSON.stringify(k, null, 2)); }
 
 function cors(res, origin) {
-  res.writeHead(200, {
-    'Content-Type': 'application/json',
-    'Access-Control-Allow-Origin': origin || '*',
-    'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type,Authorization'
-  });
+  res.setHeader('Access-Control-Allow-Origin', origin || '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type,Authorization');
 }
 
 function proxy(targetUrl, headers, body, cb) {
@@ -29,7 +26,7 @@ function proxy(targetUrl, headers, body, cb) {
   }, (res) => {
     let data = '';
     res.on('data', c => data += c);
-    res.on('end', () => cb(null, data));
+    res.on('end', () => cb(null, data, res.statusCode));
   });
   req.on('error', e => cb(e));
   req.on('timeout', () => { req.destroy(); cb(new Error('timeout')); });
@@ -333,8 +330,33 @@ const server = http.createServer((req, res) => {
   if (req.method === 'OPTIONS') return res.end();
 
   if (req.method === 'GET' && req.url === '/health') {
+    res.setHeader('Content-Type', 'application/json; charset=utf-8');
     return res.end(JSON.stringify({ ok: true }));
   }
+
+  // Statik dosya sunucu (site + köprü tek origin)
+  if (req.method === 'GET' && req.url !== '/keys' && !req.url.startsWith('/video-status') && req.url !== '/health') {
+    let urlPath = req.url.split('?')[0].split('#')[0];
+    if (!urlPath.startsWith('/')) urlPath = '/' + urlPath;
+    urlPath = urlPath.replace(/\\/g, '/');
+    const parts = urlPath.split('/').filter(p => p && p !== '.');
+    const traversal = parts.some(p => p === '..');
+    let file = (!traversal && parts.length === 0) ? 'index.html' : parts.join('/');
+    if (traversal) file = '';
+    const ext = path.extname(file).toLowerCase();
+    const types = { '.html': 'text/html; charset=utf-8', '.js': 'application/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.json': 'application/json', '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.svg': 'image/svg+xml', '.ico': 'image/x-icon', '.webp': 'image/webp', '.gif': 'image/gif' };
+    if (file) {
+      const full = path.resolve(__dirname, file);
+      if (full.startsWith(__dirname) && fs.existsSync(full) && fs.statSync(full).isFile()) {
+        res.setHeader('Content-Type', types[ext] || 'application/octet-stream');
+        res.statusCode = 200;
+        return fs.createReadStream(full).pipe(res);
+      }
+    }
+  }
+
+  res.setHeader('Content-Type', 'application/json; charset=utf-8');
+  res.statusCode = 200;
 
   if (req.method === 'GET' && req.url === '/keys') {
     const k = loadKeys();
@@ -448,17 +470,32 @@ const server = http.createServer((req, res) => {
           max_tokens: 1024
         });
 
-        proxy(url, { 'Authorization': 'Bearer ' + k }, reqBody, (err, data) => {
-          if (err) return res.end(JSON.stringify({ error: err.message }));
-          try {
-            const j = JSON.parse(data);
-            if (j.choices?.[0]?.message?.content) {
-              res.end(JSON.stringify({ reply: j.choices[0].message.content }));
-            } else {
-              res.end(JSON.stringify({ error: j.error?.message || 'Yanıt alınamadı' }));
+        const attempt = (retriesLeft) => {
+          proxy(url, { 'Authorization': 'Bearer ' + k }, reqBody, (err, data, status) => {
+            if (err) {
+              if (retriesLeft > 0 && (err.message === 'timeout' || err.code === 'ECONNRESET')) {
+                return setTimeout(() => attempt(retriesLeft - 1), 1500);
+              }
+              return res.end(JSON.stringify({ error: 'Bağlantı hatası: ' + err.message }));
             }
-          } catch(e) { res.end(JSON.stringify({ error: 'Parse hatası' })); }
-        });
+            try {
+              const j = JSON.parse(data);
+              if (j.choices?.[0]?.message?.content) {
+                return res.end(JSON.stringify({ reply: j.choices[0].message.content }));
+              }
+              const apiMsg = j.error?.message || j.message || null;
+              if ((status === 503 || status === 429 || !apiMsg) && retriesLeft > 0) {
+                return setTimeout(() => attempt(retriesLeft - 1), 2000);
+              }
+              const label = status && status >= 400 ? 'NVIDIA API ' + status + ': ' : '';
+              res.end(JSON.stringify({ error: label + (apiMsg || 'Model şu an yanıt vermiyor (soğuk başlangıç olabilir, tekrar deneyin)') }));
+            } catch(e) {
+              if (retriesLeft > 0) return setTimeout(() => attempt(retriesLeft - 1), 1500);
+              res.end(JSON.stringify({ error: 'Yanıt çözümlenemedi (HTTP ' + status + ')' }));
+            }
+          });
+        };
+        attempt(2);
       } catch(e) { res.end(JSON.stringify({ error: 'Geçersiz veri' })); }
     });
     return;

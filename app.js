@@ -1,5 +1,6 @@
 // ===== AI ASİSTANIM =====
-const API = 'http://localhost:8788';
+// Köprü aynı origin'den sunuluyorsa göreli, değilse localhost kullan
+const API = (location.hostname === 'localhost' || location.hostname === '127.0.0.1') && location.port === '8788' ? '' : 'http://localhost:8788';
 const messagesEl = document.getElementById('messages');
 const userInput = document.getElementById('userInput');
 const sendBtn = document.getElementById('sendBtn');
@@ -785,63 +786,25 @@ const MODEL_DB = {
   // --- ByteDance (Deneme) ---
   'bytedance:doubao-pro-256k': { name:'Doubao Pro 256K', provider:'ByteDance', rating:7, price:'deneme', limits:'Ücretsiz deneme', caps:['Sohbet','Kod Yazma','Uzun Bağlam (256K)','Çeviri'], desc:'ByteDance Doubao. 256K context.' },
 
-  // --- NVIDIA NIM (Tüm modeller ücretsiz - 40 RPM, nvapi key) ---
-  'nvidia:deepseek-ai/deepseek-v4.1-flash': { name:'DeepSeek V4.1 Flash', provider:'NVIDIA NIM', rating:9, price:'ucretsiz', limits:'40 RPM, ücretsiz prototype', caps:['Sohbet','Kod Yazma','Kod Analizi','Matematik','Mantıksal Çıkarım','Uzun Bağlam'], desc:'552B MoE (8B aktif). Multimodal. NVIDIA NIM ücretsiz.' },
-  'nvidia:z-ai/glm-5.3': { name:'GLM 5.3', provider:'NVIDIA NIM', rating:9, price:'ucretsiz', limits:'40 RPM', caps:['Sohbet','Kod Yazma','Kod Analizi','Matematik','Mantıksal Çıkarım','Araç Çağrısı'], desc:'753B parametre text MoE. Reasoning + tool calling. Ücretsiz.' },
-  'nvidia:z-ai/glm-5.3-flash': { name:'GLM 5.3 Flash', provider:'NVIDIA NIM', rating:8, price:'ucretsiz', limits:'40 RPM', caps:['Sohbet','Kod Yazma','Görsel Anlama','Matematik','Araç Çağrısı'], desc:'320B/18B aktif multimodal MoE. Hızlı. Ücretsiz.' },
-  'nvidia:moonshotai/kimi-k3': { name:'Kimi K3', provider:'NVIDIA NIM', rating:9, price:'ucretsiz', limits:'40 RPM', caps:['Sohbet','Kod Yazma','Kod Analizi','Uzun Bağlam','Görsel Anlama','Araç Çağrısı'], desc:'~2.8T hybrid MoE. Uzun vadeli coding + agentic. Ücretsiz.' },
-  'nvidia:moonshotai/kimi-k2.6': { name:'Kimi K2.6', provider:'NVIDIA NIM', rating:8, price:'ucretsiz', limits:'40 RPM', caps:['Sohbet','Kod Yazma','Matematik','Mantıksal Çıkarım'], desc:'Moonshot Kimi K2.6. Güçlü coding. Ücretsiz.' },
-  'nvidia:openai/gpt-oss-20b': { name:'GPT-OSS 20B', provider:'NVIDIA NIM', rating:7, price:'ucretsiz', limits:'40 RPM', caps:['Sohbet','Kod Yazma','Matematik','Mantıksal Çıkarım'], desc:'OpenAI open-source 20B MoE. Verimli reasoning. Ücretsiz.' },
-  'nvidia:nvidia/nemotron-3-ultra-550b-a55b': { name:'Nemotron 3 Ultra 550B', provider:'NVIDIA NIM', rating:10, price:'ucretsiz', limits:'40 RPM', caps:['Sohbet','Kod Yazma','Kod Analizi','Matematik','Mantıksal Çıkarım','Uzun Bağlam (1M)','Araç Çağrısı'], desc:'550B hybrid Mamba-Transformer MoE. 1M context. Agent + reasoning. Ücretsiz.' },
+  // --- NVIDIA NIM (API'de gerçekten sohbet edilebilir ücretsiz modeller, 40 RPM) ---
+  'nvidia:nvidia/nemotron-3-ultra-550b-a55b': { name:'Nemotron 3 Ultra 550B', provider:'NVIDIA NIM', rating:10, price:'ucretsiz', limits:'40 RPM', caps:['Sohbet','Kod Yazma','Kod Analizi','Matematik','Mantıksal Çıkarım','Uzun Bağlam (1M)','Araç Çağrısı'], desc:'550B hybrid Mamba-Transformer MoE. 1M context. Agent + reasoning. Ücretsiz. Soğuk başlangıçta ilk istek 503 verebilir.' },
   'nvidia:nvidia/nemotron-3-super-120b-a12b': { name:'Nemotron 3 Super 120B', provider:'NVIDIA NIM', rating:9, price:'ucretsiz', limits:'40 RPM', caps:['Sohbet','Kod Yazma','Kod Analizi','Matematik','Mantıksal Çıkarım','Uzun Bağlam (1M)','Araç Çağrısı'], desc:'120B hybrid MoE. 1M context. Coding, planning, tool calling. Ücretsiz.' },
   'nvidia:nvidia/nemotron-3-nano-omni-30b-a3b-reasoning': { name:'Nemotron 3 Nano Omni 30B', provider:'NVIDIA NIM', rating:8, price:'ucretsiz', limits:'40 RPM', caps:['Sohbet','Kod Yazma','Görsel Anlama','Matematik','Mantıksal Çıkarım'], desc:'30B omni-modal (görüntü, video, konuşma, metin). Reasoning. Ücretsiz.' },
-  'nvidia:nvidia/nemotron-3.5-lightning-30b-a3b': { name:'Nemotron 3.5 Lightning 30B', provider:'NVIDIA NIM', rating:8, price:'ucretsiz', limits:'40 RPM', caps:['Sohbet','Kod Yazma','Matematik','Mantıksal Çıkarım','Araç Çağrısı'], desc:'En hızlı 30B A3B MoE. Agent workhorse. Ağustos 2026. Ücretsiz.' },
-  'nvidia:nvidia/nemotron-nano-3-30b-a3b': { name:'Nemotron Nano 3 30B', provider:'NVIDIA NIM', rating:7, price:'ucretsiz', limits:'40 RPM', caps:['Sohbet','Kod Yazma','Matematik','Mantıksal Çıkarım'], desc:'30B MoE, 1M context. Coding + reasoning. Ücretsiz.' },
-  'nvidia:nvidia/nemotron-4-340b-instruct': { name:'Nemotron 4 340B', provider:'NVIDIA NIM', rating:8, price:'ucretsiz', limits:'40 RPM', caps:['Sohbet','Kod Yazma','Matematik','Çeviri'], desc:'340B instruct model. NVIDIA NIM ücretsiz.' },
-  'nvidia:nvidia/llama-3.1-nemotron-70b-instruct': { name:'Nemotron 70B', provider:'NVIDIA NIM', rating:8, price:'ucretsiz', limits:'40 RPM', caps:['Sohbet','Kod Yazma','Matematik','Mantıksal Çıkarım'], desc:'Llama 3.1 70B tabanlı Nemotron. RLHF ile hizalanmış. Ücretsiz.' },
-  'nvidia:nvidia/llama-3.1-nemotron-51b-instruct': { name:'Nemotron 51B', provider:'NVIDIA NIM', rating:7, price:'ucretsiz', limits:'40 RPM', caps:['Sohbet','Kod Yazma','Matematik'], desc:'51B pruned Llama. Dengeli performans. Ücretsiz.' },
-  'nvidia:nvidia/llama-3.1-nemotron-ultra-253b-v1': { name:'Nemotron Ultra 253B', provider:'NVIDIA NIM', rating:9, price:'ucretsiz', limits:'40 RPM', caps:['Sohbet','Kod Yazma','Kod Analizi','Matematik','Mantıksal Çıkarım'], desc:'253B reasoning model. Derin düşünme. Ücretsiz.' },
-  'nvidia:nvidia/llama3-chatqa-1.5-70b': { name:'ChatQA 1.5 70B', provider:'NVIDIA NIM', rating:7, price:'ucretsiz', limits:'40 RPM', caps:['Sohbet','Çeviri','Matematik'], desc:'NVIDIA ChatQA. RAG dostu sohbet. Ücretsiz.' },
-  'nvidia:nvidia/mistral-nemo-minitron-8b-8k-instruct': { name:'Minitron 8B', provider:'NVIDIA NIM', rating:6, price:'ucretsiz', limits:'40 RPM', caps:['Sohbet','Kod Yazma','Matematik'], desc:'8B Minitron. Hafif ve hızlı. Ücretsiz.' },
-  'nvidia:mistralai/mistral-large': { name:'Mistral Large', provider:'NVIDIA NIM', rating:8, price:'ucretsiz', limits:'40 RPM', caps:['Sohbet','Kod Yazma','Kod Analizi','Matematik','Çeviri','Yaratıcı Yazarlık'], desc:'Mistral Large. NVIDIA NIM üzerinden ücretsiz.' },
-  'nvidia:mistralai/mistral-large-2-instruct': { name:'Mistral Large 2', provider:'NVIDIA NIM', rating:8, price:'ucretsiz', limits:'40 RPM', caps:['Sohbet','Kod Yazma','Kod Analizi','Matematik','Çeviri'], desc:'Mistral Large 2 Instruct. Ücretsiz.' },
+  'nvidia:z-ai/glm-5.3': { name:'GLM 5.3', provider:'NVIDIA NIM', rating:9, price:'ucretsiz', limits:'40 RPM', caps:['Sohbet','Kod Yazma','Kod Analizi','Matematik','Mantıksal Çıkarım','Araç Çağrısı'], desc:'753B parametre text MoE. Reasoning + tool calling. Ücretsiz.' },
   'nvidia:mistralai/mistral-nemotron': { name:'Mistral Nemotron', provider:'NVIDIA NIM', rating:8, price:'ucretsiz', limits:'40 RPM', caps:['Sohbet','Kod Yazma','Kod Analizi','Matematik','Araç Çağrısı'], desc:'Agentic workflow uzmanı. Coding + function calling. Ücretsiz.' },
-  'nvidia:mistralai/mistral-7b-instruct-v0.3': { name:'Mistral 7B v0.3', provider:'NVIDIA NIM', rating:6, price:'ucretsiz', limits:'40 RPM', caps:['Sohbet','Kod Yazma','Çeviri'], desc:'Klasik Mistral 7B. Hafif. Ücretsiz.' },
-  'nvidia:mistralai/codestral-22b-instruct-v0.1': { name:'Codestral 22B', provider:'NVIDIA NIM', rating:7, price:'ucretsiz', limits:'40 RPM', caps:['Kod Yazma','Kod Analizi','Sohbet'], desc:'Mistral kod yazma uzmanı. Ücretsiz.' },
-  'nvidia:mistralai/mixtral-8x22b-v0.1': { name:'Mixtral 8x22B', provider:'NVIDIA NIM', rating:7, price:'ucretsiz', limits:'40 RPM', caps:['Sohbet','Kod Yazma','Matematik','Çeviri'], desc:'Mixtral 8x22B MoE. Ücretsiz.' },
-  'nvidia:nv-mistralai/mistral-nemo-12b-instruct': { name:'Mistral NeMo 12B', provider:'NVIDIA NIM', rating:7, price:'ucretsiz', limits:'40 RPM', caps:['Sohbet','Kod Yazma','Çeviri','Matematik'], desc:'NVIDIA + Mistral 12B. 128K context. Ücretsiz.' },
-  'nvidia:google/gemma-4-31b-it': { name:'Gemma 4 31B', provider:'NVIDIA NIM', rating:8, price:'ucretsiz', limits:'40 RPM', caps:['Sohbet','Kod Yazma','Kod Analizi','Matematik','Mantıksal Çıkarım','Görsel Anlama'], desc:'Google Gemma 4 31B. Frontier reasoning. Ücretsiz.' },
-  'nvidia:google/gemma-3-12b-it': { name:'Gemma 3 12B', provider:'NVIDIA NIM', rating:7, price:'ucretsiz', limits:'40 RPM', caps:['Sohbet','Kod Yazma','Görsel Anlama','Çeviri'], desc:'Google Gemma 3 12B multimodal. Ücretsiz.' },
-  'nvidia:google/gemma-3-4b-it': { name:'Gemma 3 4B', provider:'NVIDIA NIM', rating:6, price:'ucretsiz', limits:'40 RPM', caps:['Sohbet','Kod Yazma','Çeviri'], desc:'Küçük Gemma 3 4B. Hızlı. Ücretsiz.' },
-  'nvidia:google/gemma-2b': { name:'Gemma 2B', provider:'NVIDIA NIM', rating:5, price:'ucretsiz', limits:'40 RPM', caps:['Sohbet','Çeviri'], desc:'Gemma 2B. Minimal. Ücretsiz.' },
-  'nvidia:google/codegemma-1.1-7b': { name:'CodeGemma 1.1 7B', provider:'NVIDIA NIM', rating:6, price:'ucretsiz', limits:'40 RPM', caps:['Kod Yazma','Kod Analizi','Sohbet'], desc:'Google kod modeli. Ücretsiz.' },
-  'nvidia:google/codegemma-7b': { name:'CodeGemma 7B', provider:'NVIDIA NIM', rating:6, price:'ucretsiz', limits:'40 RPM', caps:['Kod Yazma','Kod Analizi','Sohbet'], desc:'Google CodeGemma 7B. Ücretsiz.' },
-  'nvidia:google/diffusiongemma-26b-a4b-it': { name:'DiffusionGemma 26B', provider:'NVIDIA NIM', rating:7, price:'ucretsiz', limits:'40 RPM', caps:['Sohbet','Kod Yazma','Matematik','Mantıksal Çıkarım'], desc:'Diffusion tabanlı 26B. Paralel token üretimi. Ücretsiz.' },
   'nvidia:poolside/laguna-xs-2.1': { name:'Laguna XS 2.1', provider:'NVIDIA NIM', rating:7, price:'ucretsiz', limits:'40 RPM', caps:['Kod Yazma','Kod Analizi','Sohbet','Araç Çağrısı'], desc:'33B MoE. Agentic coding + terminal görevleri. Ücretsiz.' },
-  'nvidia:meta/llama2-70b': { name:'Llama 2 70B', provider:'NVIDIA NIM', rating:6, price:'ucretsiz', limits:'40 RPM', caps:['Sohbet','Çeviri','Matematik'], desc:'Meta Llama 2 70B. Klasik. Ücretsiz.' },
-  'nvidia:meta/codellama-70b': { name:'CodeLlama 70B', provider:'NVIDIA NIM', rating:6, price:'ucretsiz', limits:'40 RPM', caps:['Kod Yazma','Kod Analizi','Sohbet'], desc:'Meta kod modeli 70B. Ücretsiz.' },
+  'nvidia:google/diffusiongemma-26b-a4b-it': { name:'DiffusionGemma 26B', provider:'NVIDIA NIM', rating:7, price:'ucretsiz', limits:'40 RPM', caps:['Sohbet','Kod Yazma','Matematik','Mantıksal Çıkarım'], desc:'Diffusion tabanlı 26B. Paralel token üretimi. Ücretsiz.' },
   'nvidia:meta/llama-3.2-11b-vision-instruct': { name:'Llama 3.2 11B Vision', provider:'NVIDIA NIM', rating:7, price:'ucretsiz', limits:'40 RPM', caps:['Sohbet','Görsel Anlama','Kod Yazma'], desc:'Llama 3.2 vision 11B. Görsel anlama. Ücretsiz.' },
-  'nvidia:meta/llama-3.2-90b-vision-instruct': { name:'Llama 3.2 90B Vision', provider:'NVIDIA NIM', rating:8, price:'ucretsiz', limits:'40 RPM', caps:['Sohbet','Görsel Anlama','Kod Yazma','Matematik'], desc:'Llama 3.2 vision 90B. Güçlü görsel anlama. Ücretsiz.' },
   'nvidia:meta/muse-glimmer-30b': { name:'Muse Glimmer 30B', provider:'NVIDIA NIM', rating:7, price:'ucretsiz', limits:'40 RPM', caps:['Sohbet','Görsel Anlama','Kod Yazma','Araç Çağrısı'], desc:'Multimodal reasoning. Native tool-calling. Ücretsiz.' },
-  'nvidia:microsoft/phi-3-vision-128k-instruct': { name:'Phi 3 Vision 128K', provider:'NVIDIA NIM', rating:7, price:'ucretsiz', limits:'40 RPM', caps:['Sohbet','Görsel Anlama','Kod Yazma'], desc:'Microsoft Phi 3 vision. 128K context. Ücretsiz.' },
-  'nvidia:microsoft/phi-3.5-moe-instruct': { name:'Phi 3.5 MoE', provider:'NVIDIA NIM', rating:7, price:'ucretsiz', limits:'40 RPM', caps:['Sohbet','Kod Yazma','Matematik','Çeviri'], desc:'Microsoft Phi 3.5 MoE. Ücretsiz.' },
-  'nvidia:01-ai/yi-large': { name:'Yi Large', provider:'NVIDIA NIM', rating:7, price:'ucretsiz', limits:'40 RPM', caps:['Sohbet','Kod Yazma','Çeviri','Matematik'], desc:'01.AI Yi Large. Ücretsiz.' },
-  'nvidia:ai21labs/jamba-1.5-large-instruct': { name:'Jamba 1.5 Large', provider:'NVIDIA NIM', rating:8, price:'ucretsiz', limits:'40 RPM', caps:['Sohbet','Kod Yazma','Uzun Bağlam (256K)','Matematik'], desc:'AI21 Jamba 1.5 Large. 256K context. Ücretsiz.' },
-  'nvidia:aisingapore/sea-lion-7b-instruct': { name:'Sea Lion 7B', provider:'NVIDIA NIM', rating:5, price:'ucretsiz', limits:'40 RPM', caps:['Sohbet','Çeviri'], desc:'SEA-LLM. Güneydoğu Asya dilleri. Ücretsiz.' },
-  'nvidia:bigcode/starcoder2-15b': { name:'StarCoder2 15B', provider:'NVIDIA NIM', rating:6, price:'ucretsiz', limits:'40 RPM', caps:['Kod Yazma','Kod Analizi','Sohbet'], desc:'BigCode StarCoder2. Kod uzmanı. Ücretsiz.' },
-  'nvidia:databricks/dbrx-instruct': { name:'DBRX Instruct', provider:'NVIDIA NIM', rating:7, price:'ucretsiz', limits:'40 RPM', caps:['Sohbet','Kod Yazma','Matematik','Çeviri'], desc:'Databricks DBRX 132B MoE. Ücretsiz.' },
-  'nvidia:deepseek-ai/deepseek-coder-6.7b-instruct': { name:'DeepSeek Coder 6.7B', provider:'NVIDIA NIM', rating:6, price:'ucretsiz', limits:'40 RPM', caps:['Kod Yazma','Kod Analizi','Sohbet'], desc:'DeepSeek kod modeli 6.7B. Ücretsiz.' },
-  'nvidia:ibm/granite-3.0-8b-instruct': { name:'Granite 3.0 8B', provider:'NVIDIA NIM', rating:6, price:'ucretsiz', limits:'40 RPM', caps:['Sohbet','Kod Yazma','Çeviri'], desc:'IBM Granite 3.0 8B. Ücretsiz.' },
-  'nvidia:ibm/granite-3.0-3b-a800m-instruct': { name:'Granite 3.0 3B', provider:'NVIDIA NIM', rating:5, price:'ucretsiz', limits:'40 RPM', caps:['Sohbet','Çeviri'], desc:'IBM Granite 3B. Hafif. Ücretsiz.' },
-  'nvidia:ibm/granite-34b-code-instruct': { name:'Granite 34B Code', provider:'NVIDIA NIM', rating:6, price:'ucretsiz', limits:'40 RPM', caps:['Kod Yazma','Kod Analizi','Sohbet'], desc:'IBM kod modeli 34B. Ücretsiz.' },
-  'nvidia:ibm/granite-8b-code-instruct': { name:'Granite 8B Code', provider:'NVIDIA NIM', rating:5, price:'ucretsiz', limits:'40 RPM', caps:['Kod Yazma','Kod Analizi','Sohbet'], desc:'IBM kod modeli 8B. Ücretsiz.' },
-  'nvidia:writer/palmyra-creative-122b': { name:'Palmyra Creative 122B', provider:'NVIDIA NIM', rating:7, price:'ucretsiz', limits:'40 RPM', caps:['Sohbet','Yaratıcı Yazarlık','Çeviri'], desc:'Writer Palmyra Creative. Yaratıcı yazım. Ücretsiz.' },
-  'nvidia:writer/palmyra-fin-70b-32k': { name:'Palmyra Fin 70B', provider:'NVIDIA NIM', rating:6, price:'ucretsiz', limits:'40 RPM', caps:['Sohbet','Matematik','Finans'], desc:'Writer finans modeli. 32K. Ücretsiz.' },
-  'nvidia:writer/palmyra-med-70b': { name:'Palmyra Med 70B', provider:'NVIDIA NIM', rating:6, price:'ucretsiz', limits:'40 RPM', caps:['Sohbet','Çeviri'], desc:'Writer sağlık modeli. Ücretsiz.' },
-  'nvidia:writer/palmyra-med-70b-32k': { name:'Palmyra Med 70B 32K', provider:'NVIDIA NIM', rating:6, price:'ucretsiz', limits:'40 RPM', caps:['Sohbet','Çeviri'], desc:'Writer sağlık modeli 32K. Ücretsiz.' },
-  'nvidia:zyphra/zamba2-7b-instruct': { name:'Zamba2 7B', provider:'NVIDIA NIM', rating:5, price:'ucretsiz', limits:'40 RPM', caps:['Sohbet','Kod Yazma','Çeviri'], desc:'Zyphra Zamba2 7B. Ücretsiz.' },
-  'nvidia:nvidia/neva-22b': { name:'NeVA 22B', provider:'NVIDIA NIM', rating:6, price:'ucretsiz', limits:'40 RPM', caps:['Sohbet','Görsel Anlama'], desc:'NVIDIA NeVA vision 22B. Ücretsiz.' },
-  'nvidia:nvidia/vila': { name:'VILA', provider:'NVIDIA NIM', rating:6, price:'ucretsiz', limits:'40 RPM', caps:['Sohbet','Görsel Anlama','Video Anlama'], desc:'NVIDIA VILA multimodal. Video + görüntü. Ücretsiz.' },
+  'nvidia:deepseek-ai/deepseek-v4.1-flash': { name:'DeepSeek V4.1 Flash', provider:'NVIDIA NIM', rating:9, price:'ucretsiz', limits:'40 RPM, soğuk başlangıç olabilir', caps:['Sohbet','Kod Yazma','Kod Analizi','Matematik','Mantıksal Çıkarım','Uzun Bağlam'], desc:'552B MoE (8B aktif). İlk istek timeout/503 verebilir - tekrar deneyin. Ücretsiz.' },
+  'nvidia:google/gemma-4-31b-it': { name:'Gemma 4 31B', provider:'NVIDIA NIM', rating:8, price:'ucretsiz', limits:'40 RPM, soğuk başlangıç olabilir', caps:['Sohbet','Kod Yazma','Kod Analizi','Matematik','Mantıksal Çıkarım','Görsel Anlama'], desc:'Google Gemma 4 31B. Frontier reasoning. İlk istek uzun sürebilir. Ücretsiz.' },
+  'nvidia:moonshotai/kimi-k3': { name:'Kimi K3', provider:'NVIDIA NIM', rating:9, price:'ucretsiz', limits:'40 RPM, soğuk başlangıç olabilir', caps:['Sohbet','Kod Yazma','Kod Analizi','Uzun Bağlam','Görsel Anlama','Araç Çağrısı'], desc:'~2.8T hybrid MoE. Uzun vadeli coding + agentic. İlk istek timeout verebilir. Ücretsiz.' },
+  'nvidia:z-ai/glm-5.3-flash': { name:'GLM 5.3 Flash', provider:'NVIDIA NIM', rating:8, price:'ucretsiz', limits:'40 RPM, soğuk başlangıç olabilir', caps:['Sohbet','Kod Yazma','Görsel Anlama','Matematik','Araç Çağrısı'], desc:'320B/18B aktif multimodal MoE. Hızlı. İlk istek timeout verebilir. Ücretsiz.' },
+  'nvidia:openai/gpt-oss-20b': { name:'GPT-OSS 20B', provider:'NVIDIA NIM', rating:7, price:'ucretsiz', limits:'40 RPM, soğuk başlangıç olabilir', caps:['Sohbet','Kod Yazma','Matematik','Mantıksal Çıkarım'], desc:'OpenAI open-source 20B MoE. Verimli reasoning. İlk istek timeout verebilir. Ücretsiz.' },
+  'nvidia:nvidia/nemotron-3.5-lightning-30b-a3b': { name:'Nemotron 3.5 Lightning 30B', provider:'NVIDIA NIM', rating:8, price:'ucretsiz', limits:'40 RPM, soğuk başlangıç olabilir', caps:['Sohbet','Kod Yazma','Matematik','Mantıksal Çıkarım','Araç Çağrısı'], desc:'En hızlı 30B A3B MoE. Agent workhorse. İlk istek timeout verebilir. Ücretsiz.' },
+  'nvidia:meta/llama-3.2-90b-vision-instruct': { name:'Llama 3.2 90B Vision', provider:'NVIDIA NIM', rating:8, price:'ucretsiz', limits:'40 RPM, soğuk başlangıç olabilir', caps:['Sohbet','Görsel Anlama','Kod Yazma','Matematik'], desc:'Llama 3.2 vision 90B. Güçlü görsel anlama. İlk istek timeout verebilir. Ücretsiz.' },
+  'nvidia:moonshotai/kimi-k2.6': { name:'Kimi K2.6', provider:'NVIDIA NIM', rating:8, price:'ucretsiz', limits:'40 RPM (404 olabilir)', caps:['Sohbet','Kod Yazma','Matematik','Mantıksal Çıkarım'], desc:'Moonshot Kimi K2.6. API 404 döndüyse kullanılamıyor olabilir.' },
+
 
   // --- Airforce ---
   'airforce:mimo-v2.5-pro': { name:'MiMo v2.5 Pro', provider:'Airforce', rating:7, price:'ucretsiz', limits:'API limitleri', caps:['Sohbet','Kod Yazma','Matematik','Mantıksal Çıkarım'], desc:'Airforce MiMo v2.5 Pro. Ücretsiz.' },
@@ -1105,43 +1068,48 @@ window.saveProviderKey = function() {
   const val = document.getElementById('pmKeyInput').value.trim();
   const statusEl = document.getElementById('pmStatus');
   if (!val || val === '••••••••') { statusEl.textContent = 'Boş bırakılamaz'; statusEl.className = 'status-text error'; return; }
-  // Her iki tarafa da kaydet
   localStorage.setItem('key_' + currentProvider, '1');
+  savedKeys[currentProvider] = true;
+  updateProviderStatuses();
+  document.getElementById('pmBadge').textContent = '✓ Kayıtlı';
+  document.getElementById('pmBadge').className = 'pm-badge active';
+  document.getElementById('pmKeyInput').value = '••••••••';
   fetch(API + '/save-key', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ provider: currentProvider, key: val })
   }).then(r => r.json()).then(d => {
-    statusEl.textContent = '✓ Kaydedildi';
+    if (d.error) throw new Error(d.error);
+    statusEl.textContent = '✓ Kaydedildi (kalıcı)';
     statusEl.className = 'status-text success';
-    document.getElementById('pmKeyInput').value = '••••••••';
-    savedKeys[currentProvider] = true;
-    updateProviderStatuses();
-    document.getElementById('pmBadge').textContent = '✓ Kayıtlı';
-    document.getElementById('pmBadge').className = 'pm-badge active';
-  }).catch(() => {
-    // Bridge yoksa bile localStorage'a kaydedildi
-    statusEl.textContent = '✓ Kaydedildi (yerel)';
+  }).catch((e) => {
+    statusEl.textContent = '✓ Kaydedildi (yerel)' + (e && e.message ? ' - ' + e.message : '');
     statusEl.className = 'status-text success';
-    document.getElementById('pmKeyInput').value = '••••••••';
-    savedKeys[currentProvider] = true;
-    updateProviderStatuses();
-    document.getElementById('pmBadge').textContent = '✓ Kayıtlı';
-    document.getElementById('pmBadge').className = 'pm-badge active';
   });
 };
 
-// Key yükle - localStorage'dan, bridge varsa sunucudan da
-fetch(API + '/keys').then(r => r.json()).then(d => {
-  savedKeys = d;
-  // Sunucudan gelenleri localStorage'a da kaydet
-  Object.keys(d).forEach(k => { if (d[k]) localStorage.setItem('key_' + k, '1'); });
-  updateProviderStatuses();
-}).catch(() => {
-  // Bridge yoksa localStorage'dan yükle
+// Key yükle - localStorage + sunucu birleşimi (kaybolmayı önle)
+function loadLocalKeys() {
   Object.keys(localStorage).forEach(k => {
-    if (k.startsWith('key_')) savedKeys[k.replace('key_', '')] = true;
+    if (k.startsWith('key_') && localStorage.getItem(k)) savedKeys[k.replace('key_', '')] = true;
   });
+}
+loadLocalKeys();
+updateProviderStatuses();
+
+fetch(API + '/keys').then(r => r.json()).then(d => {
+  Object.keys(d).forEach(k => {
+    if (d[k]) {
+      savedKeys[k] = true;
+      localStorage.setItem('key_' + k, '1');
+    } else if (!savedKeys[k]) {
+      savedKeys[k] = false;
+    }
+  });
+  updateProviderStatuses();
+  const grid = document.getElementById('providerGrid');
+  if (grid && currentProvider) openProviderModal(currentProvider);
+}).catch(() => {
   updateProviderStatuses();
 });
 
