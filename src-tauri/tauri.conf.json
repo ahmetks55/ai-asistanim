@@ -1,16 +1,17 @@
 {
+  "$schema": "https://schema.tauri.app/config/2",
   "productName": "AI Asistanım",
   "version": "1.0.0",
   "identifier": "com.ai-asistanim.app",
   "build": {
     "beforeDevCommand": "",
-    "devUrl": "http://localhost:8787",
     "beforeBuildCommand": "",
-    "frontendDist": "../"
+    "frontendDist": "../dist"
   },
   "app": {
     "windows": [
       {
+        "label": "main",
         "title": "AI Asistanım",
         "width": 420,
         "height": 700,
@@ -20,24 +21,39 @@
         "transparent": false
       }
     ],
-    "trayIcon": {
-      "iconPath": "icons/icon.png",
-      "iconAsTemplate": true,
-      "tooltip": "AI Asistanım - Jarvis"
-    },
     "security": {
-      "csp": "default-src 'self'; connect-src 'self' http://localhost:* https:; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'"
+      "csp": "default-src 'self'; connect-src 'self' http://localhost:* https://*; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https: blob:; media-src 'self' blob:; font-src 'self' data:"
     }
   },
   "bundle": {
     "active": true,
-    "targets": "all",
+    "targets": ["nsis"],
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
       "icons/128x128@2x.png",
-      "icons/icon.icns",
       "icons/icon.ico"
-    ]
-  }
+    ],
+    "resources": {
+      "bridge/server.js": "bridge/server.js",
+      "bridge/keys.json": "bridge/keys.json",
+      "bridge/package.json": "bridge/package.json",
+      "bridge/index.html": "bridge/index.html",
+      "bridge/app.js": "bridge/app.js",
+      "bridge/style.css": "bridge/style.css"
+    },
+    "windows": {
+      "webviewInstallMode": {
+        "type": "downloadBootstrapper",
+        "silent": true
+      },
+      "nsis": {
+        "installMode": "currentUser"
+      }
+    },
+    "category": "Productivity",
+    "shortDescription": "AI Asistanım - Masaüstü Sohbet",
+    "publisher": "ahmetks55"
+  },
+  "plugins": {}
 }

@@ -1,18 +1,17 @@
 {
-  "name": "ai-asistanim",
-  "version": "1.0.0",
-  "description": "AI Asistanım - Sesli Asistan",
-  "main": "electron-main.js",
-  "scripts": {
-    "start": "electron .",
-    "dev": "electron . --dev"
-  },
-  "devDependencies": {
-    "electron": "^44.4.1"
-  },
-  "dependencies": {
-    "@picovoice/porcupine-web": "^4.0.1",
-    "@picovoice/web-voice-processor": "^4.0.10",
-    "vosk-browser": "^0.0.8"
-  }
+    "name": "ai-asistanim",
+    "version": "1.0.0",
+    "description": "AI AsistanÄ±m - Sesli Asistan",
+    "main": "electron-main.js",
+    "scripts": {
+        "start": "electron .",
+        "dev": "electron . --dev",
+        "tauri": "tauri",
+        "tauri:dev": "tauri dev",
+        "tauri:build": "tauri build"
+    },
+    "devDependencies": {
+        "@tauri-apps/cli": "^2.11.4",
+        "electron": "^44.4.1"
+    }
 }

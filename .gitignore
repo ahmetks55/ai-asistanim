@@ -3,3 +3,5 @@ node_modules/
 .DS_Store
 bridge_admin.json
 keys.json
+src-tauri/target/
+*.log
