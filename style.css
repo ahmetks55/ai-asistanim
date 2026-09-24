@@ -15,6 +15,8 @@
   --primary-hover: #818cf8;
   --user-bg: #6366f1;
   --bot-bg: #1e1e1e;
+  --surface1: #1f1f1f;
+  --error: #ef4444;
 }
 
 body {
@@ -80,7 +82,7 @@ body {
 .dropdown-group-label {
   font-size: 10px; font-weight: 700; color: var(--primary); text-transform: uppercase;
   letter-spacing: 0.5px; padding: 8px 14px 4px; position: sticky; top: 0;
-  background: var(--surface); z-index: 1;
+  background: var(--surface); z-index: 1; pointer-events: none;
 }
 
 .dropdown-option {
@@ -456,51 +458,6 @@ textarea::placeholder {
 }
 
 /* Model Dropdown Search & Filters */
-.dropdown-search {
-  padding: 8px;
-  border-bottom: 1px solid var(--border);
-  position: sticky;
-  top: 0;
-  background: var(--surface1);
-  z-index: 10;
-}
-.dropdown-search input {
-  width: 100%;
-  background: var(--surface2);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: 6px 10px;
-  color: var(--text);
-  font-size: 12px;
-  outline: none;
-}
-.dropdown-search input:focus {
-  border-color: var(--primary);
-}
-
-/* Model Dropdown Search */
-.dropdown-search {
-  padding: 8px;
-  border-bottom: 1px solid var(--border);
-  position: sticky;
-  top: 0;
-  background: var(--surface1);
-  z-index: 10;
-}
-.dropdown-search input {
-  width: 100%;
-  background: var(--surface2);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: 6px 10px;
-  color: var(--text);
-  font-size: 12px;
-  outline: none;
-}
-.dropdown-search input:focus {
-  border-color: var(--primary);
-}
-
 /* Dropdown Toolbar */
 .dropdown-toolbar {
   display: flex;
@@ -549,9 +506,6 @@ textarea::placeholder {
   padding: 6px 12px;
   background: var(--surface);
   border-bottom: 1px solid var(--border);
-  position: sticky;
-  top: 0;
-  z-index: 100;
 }
 .active-filter-tag {
   display: inline-flex;
@@ -578,13 +532,15 @@ textarea::placeholder {
   padding: 12px;
   border-bottom: 1px solid var(--border);
   background: var(--surface);
-  position: sticky;
-  top: 0;
-  z-index: 100;
   display: flex;
   flex-direction: column;
   gap: 12px;
   animation: slideDown 0.2s ease;
+}
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-6px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .filter-section h4 {

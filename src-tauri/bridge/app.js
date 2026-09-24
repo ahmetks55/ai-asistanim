@@ -1370,6 +1370,7 @@ if (dropdownList) {
   dropdownList.addEventListener('click', (e) => {
     const opt = e.target.closest?.('.dropdown-option');
     if (!opt || !dropdownList.contains(opt)) return;
+    e.stopPropagation();
     const key = opt.getAttribute('data-key');
     if (key) selectModel(key);
   });
@@ -1522,10 +1523,78 @@ window.filterModels = function(input) {
     const visibleModels = document.querySelectorAll(`.dropdown-option[data-provider="${provider}"]:not([style*="display: none"])`);
     label.style.display = visibleModels.length > 0 ? '' : 'none';
   });
-  
+
   // Sağlayıcı ve Yetenek filtrelerini doldur (ilk açılışta)
   populateFilterOptions();
+
+  // Aktif filtre etiketlerini güncelle
+  updateActiveFilters();
 };
+
+// Aktif filtreleri #activeFiltersBar üzerinde etiket olarak göster
+function updateActiveFilters() {
+  const bar = document.getElementById('activeFiltersBar');
+  if (!bar) return;
+
+  const tags = [];
+  const searchVal = (document.getElementById('modelSearch')?.value || '').trim();
+  if (searchVal) {
+    tags.push({ kind: 'search', label: 'Ara: ' + searchVal });
+  }
+  const pushChecked = (containerId, prefix) => {
+    const box = document.getElementById(containerId);
+    if (!box) return;
+    box.querySelectorAll('input[type="checkbox"]:checked').forEach(cb => {
+      tags.push({ kind: prefix, value: cb.value, label: cb.parentElement?.textContent.trim() || cb.value });
+    });
+  };
+  pushChecked('filterProviderOptions', 'provider');
+  pushChecked('filterPriceOptions', 'price');
+  pushChecked('filterRatingOptions', 'rating');
+  pushChecked('filterCapabilityOptions', 'cap');
+
+  if (tags.length === 0) {
+    bar.innerHTML = '';
+    bar.style.display = 'none';
+    return;
+  }
+
+  bar.innerHTML = '';
+  tags.forEach(t => {
+    const span = document.createElement('span');
+    span.className = 'active-filter-tag';
+    span.textContent = t.label + ' ';
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.textContent = '×';
+    btn.title = 'Filtreyi kaldır';
+    btn.onclick = () => removeActiveFilter(t);
+    span.appendChild(btn);
+    bar.appendChild(span);
+  });
+  bar.style.display = 'flex';
+}
+
+function removeActiveFilter(t) {
+  if (t.kind === 'search') {
+    const search = document.getElementById('modelSearch');
+    if (search) search.value = '';
+  } else {
+    const map = {
+      provider: 'filterProviderOptions',
+      price: 'filterPriceOptions',
+      rating: 'filterRatingOptions',
+      cap: 'filterCapabilityOptions'
+    };
+    const box = document.getElementById(map[t.kind]);
+    if (box) {
+      box.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+        if (cb.value === t.value) cb.checked = false;
+      });
+    }
+  }
+  filterModels();
+}
 
 function populateFilterOptions() {
   const providers = [...new Set(Object.values(MODEL_DB).map(m => m.provider).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'tr'));
@@ -1582,6 +1651,8 @@ window.clearAllFilters = function() {
   document.querySelectorAll('.filter-chip.active').forEach(b => b.classList.remove('active'));
   const search = document.getElementById('modelSearch');
   if (search) search.value = '';
+  const bar = document.getElementById('activeFiltersBar');
+  if (bar) { bar.innerHTML = ''; bar.style.display = 'none'; }
   filterModels();
 };
 
@@ -1593,6 +1664,8 @@ dropdownSelected.addEventListener('click', (e) => {
   hideTooltip();
   if (dropdownEl.classList.contains('open')) {
     initDropdown(); // Dropdown açıldığında listeyi tazele (arama kutusunu koruyarak)
+    const searchEl = document.getElementById('modelSearch');
+    if (searchEl && searchEl.value) filterModels(searchEl.value);
     const rect = dropdownSelected.getBoundingClientRect();
     dropdownList.style.left = rect.left + 'px';
     dropdownList.style.bottom = (window.innerHeight - rect.top + 4) + 'px';
