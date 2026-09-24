@@ -1085,13 +1085,16 @@ function initProviderGrid() {
   const grid = document.getElementById('providerGrid');
   let html = '';
   Object.entries(PROVIDERS).forEach(([key, p]) => {
-    html += '<div class="pg-card" onclick="openProviderModal(\'' + key + '\')">'
+    html += '<div class="pg-card" data-provider="' + key + '">'
       + '<span class="pg-icon">' + p.icon + '</span>'
       + '<span class="pg-name">' + p.name + '</span>'
       + '<span class="pg-status" id="pg-' + key + '">✗</span>'
       + '</div>';
   });
   grid.innerHTML = html;
+  grid.querySelectorAll('.pg-card').forEach(card => {
+    card.onclick = () => openProviderModal(card.dataset.provider);
+  });
   updateProviderStatuses();
 }
 
@@ -2039,3 +2042,19 @@ async function sendVoiceMessage(text) {
     }, 800);
   }
 }
+
+// ===== CSP: Tauri hash eklediğinde satır içi onclick/oninput bloklanır.
+// Property ataması (el.onclick = fn) her iki ortamda da çalışır ve HTML'deki
+// satır içi handler'ı ezer (çift tetikleme olmaz).
+(function bindInlineHandlers() {
+  const bindId = (id, prop, fn) => { const el = document.getElementById(id); if (el) el[prop] = fn; };
+  const bindSel = (sel, prop, fn) => { const el = document.querySelector(sel); if (el) el[prop] = fn; };
+  bindId('modelSearch', 'oninput', (e) => filterModels(e.target.value));
+  bindId('filterToggleBtn', 'onclick', () => toggleFilterPanel());
+  bindId('voiceBtn', 'onclick', () => toggleVoice());
+  bindId('providerSearch', 'oninput', (e) => filterProviders(e.target.value));
+  bindSel('.btn-clear', 'onclick', () => clearAllFilters());
+  bindSel('.mic-allow-btn', 'onclick', () => grantMicPermission());
+  bindSel('.mic-deny-btn', 'onclick', () => denyMicPermission());
+  bindSel('.save-btn', 'onclick', () => saveProviderKey());
+})();
