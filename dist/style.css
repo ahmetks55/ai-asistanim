@@ -506,6 +506,8 @@ textarea::placeholder {
   padding: 6px 12px;
   background: var(--surface);
   border-bottom: 1px solid var(--border);
+  max-height: 64px;
+  overflow-y: auto;
 }
 .active-filter-tag {
   display: inline-flex;
@@ -529,12 +531,14 @@ textarea::placeholder {
 
 /* Filter Dropdown */
 .filter-dropdown {
-  padding: 12px;
+  padding: 10px 12px;
   border-bottom: 1px solid var(--border);
   background: var(--surface);
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 8px;
+  max-height: 150px;
+  overflow-y: auto;
   animation: slideDown 0.2s ease;
 }
 
@@ -553,9 +557,9 @@ textarea::placeholder {
 }
 
 .filter-options {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 2px 8px;
 }
 
 .filter-check {
@@ -565,7 +569,10 @@ textarea::placeholder {
   cursor: pointer;
   font-size: 12px;
   color: var(--text);
-  padding: 4px 0;
+  padding: 2px 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .filter-check input {
   width: 14px;
