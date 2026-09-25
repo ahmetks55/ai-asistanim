@@ -66,6 +66,64 @@ async function requestChat(provider, model, messages) {
   return r.json();
 }
 
+// Token akışı: her delta'da onDelta çağrılır; sonuç requestChat ile aynı biçimdedir
+// ({reply} veya {error}). Köprü stream desteklemiyorsa tek parça yanıtı delta olarak iletir.
+async function requestChatStream(provider, model, messages, onDelta) {
+  const r = await fetch(API + '/chat', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ provider, model, messages, stream: true })
+  });
+  const ct = r.headers.get('content-type') || '';
+  if (!r.ok) {
+    let msg = 'HTTP ' + r.status;
+    try {
+      const err = await r.json();
+      if (err.error) msg = err.error;
+    } catch (_) {}
+    return { error: msg };
+  }
+  if (!ct.includes('text/event-stream')) {
+    const j = await r.json().catch(() => ({}));
+    if (j.error) return { error: j.error };
+    if (j.reply) onDelta(j.reply);
+    return { reply: j.reply || '' };
+  }
+  const reader = r.body.getReader();
+  const dec = new TextDecoder();
+  let buf = '';
+  let reply = '';
+  let error = null;
+  let done = false;
+  for (;;) {
+    const { value, done: streamDone } = await reader.read();
+    if (streamDone) break;
+    buf += dec.decode(value, { stream: true });
+    let i;
+    while ((i = buf.indexOf('\n')) >= 0) {
+      const line = buf.slice(0, i).replace(/\r$/, '');
+      buf = buf.slice(i + 1);
+      if (line.slice(0, 5) !== 'data:') continue;
+      const payload = line.slice(5).trim();
+      if (!payload) continue;
+      let j;
+      try { j = JSON.parse(payload); } catch (e) { continue; }
+      if (typeof j.delta === 'string' && j.delta) {
+        reply += j.delta;
+        onDelta(j.delta);
+      } else if (j.error) {
+        error = j.error;
+      } else if (j.done) {
+        done = true;
+      }
+    }
+  }
+  if (reply) return { reply };
+  if (error) return { error };
+  if (done) return { reply: '' };
+  return { error: 'Akış beklenmedik şekilde sonlandı' };
+}
+
 function appendMediaMessage(kind, url) {
   const safe = safeMediaUrl(url);
   if (!safe) {
@@ -1205,15 +1263,21 @@ function addMessage(text, sender) {
   div.className = 'message ' + sender;
   const content = document.createElement('div');
   content.className = 'msg-content';
-  const parts = String(text ?? '').split('\n');
-  parts.forEach((line, i) => {
-    if (i > 0) content.appendChild(document.createElement('br'));
-    content.appendChild(document.createTextNode(line));
-  });
+  renderText(content, text);
   div.appendChild(content);
   messagesEl.appendChild(div);
   messagesEl.parentElement.scrollTop = messagesEl.parentElement.scrollHeight;
   return div;
+}
+
+// Aynı içerik biçimini (satır -> <br>) tek kaynaktan üretir (akış + tam yanıt)
+function renderText(el, text) {
+  el.innerHTML = '';
+  const parts = String(text ?? '').split('\n');
+  parts.forEach((line, i) => {
+    if (i > 0) el.appendChild(document.createElement('br'));
+    el.appendChild(document.createTextNode(line));
+  });
 }
 
 async function send() {
@@ -1292,17 +1356,27 @@ async function send() {
       }
     } else {
       const messages = buildMessages(text);
-      const d = await requestChat(provider, model, messages);
-      typing.remove();
+      const content = typing.querySelector('.msg-content');
+      let streamed = '';
+      const d = await requestChatStream(provider, model, messages, (tok) => {
+        if (typing.classList.contains('typing')) {
+          typing.classList.remove('typing');
+          content.innerHTML = '';
+        }
+        streamed += tok;
+        renderText(content, streamed);
+        messagesEl.parentElement.scrollTop = messagesEl.parentElement.scrollHeight;
+      });
       if (d.reply) {
         notifySound();
-        addMessage(d.reply, 'bot');
+        renderText(content, d.reply);
         pushHistory('user', text);
         pushHistory('assistant', d.reply);
         if (isVoiceActive) {
           speakText(d.reply);
         }
       } else {
+        typing.remove();
         errorSound();
         addMessage('Hata: ' + (d.error || 'Yanıt alınamadı'), 'bot');
       }
@@ -2014,15 +2088,25 @@ async function sendVoiceMessage(text) {
   typing.classList.add('typing');
 
   try {
-    const d = await requestChat(provider, model, buildMessages(text));
-    typing.remove();
+    const content = typing.querySelector('.msg-content');
+    let streamed = '';
+    const d = await requestChatStream(provider, model, buildMessages(text), (tok) => {
+      if (typing.classList.contains('typing')) {
+        typing.classList.remove('typing');
+        content.innerHTML = '';
+      }
+      streamed += tok;
+      renderText(content, streamed);
+      messagesEl.parentElement.scrollTop = messagesEl.parentElement.scrollHeight;
+    });
     if (d.reply) {
       notifySound();
-      addMessage(d.reply, 'bot');
+      renderText(content, d.reply);
       pushHistory('assistant', d.reply);
       speakText(d.reply);
       return;
     }
+    typing.remove();
     errorSound();
     const errorMsg = 'Hata: ' + (d.error || 'Yanıt alınamadı');
     addMessage(errorMsg, 'bot');

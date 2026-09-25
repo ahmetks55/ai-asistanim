@@ -72,7 +72,7 @@ function extractReply(provider, j) {
   return null;
 }
 
-function buildReqBody(provider, model, messages) {
+function buildReqBody(provider, model, messages, stream) {
   if (provider === 'anthropic') {
     const system = messages.filter(m => m.role === 'system').map(m => m.content).join('\n');
     const rest = messages.filter(m => m.role !== 'system').map(m => ({
@@ -81,9 +81,12 @@ function buildReqBody(provider, model, messages) {
     }));
     const body = { model, max_tokens: 1024, messages: rest };
     if (system) body.system = system;
+    if (stream) body.stream = true;
     return body;
   }
-  return { model, messages, max_tokens: 1024 };
+  const body = { model, messages, max_tokens: 1024 };
+  if (stream) body.stream = true;
+  return body;
 }
 
 function authHeaders(provider, key) {
@@ -113,6 +116,72 @@ function proxy(targetUrl, headers, body, cb) {
   });
   req.on('error', e => cb(e));
   req.on('timeout', () => { req.destroy(); cb(new Error('timeout')); });
+  req.write(body);
+  req.end();
+}
+
+// SSE chunk içinden token metnini çıkar (OpenAI-uyumlu + Anthropic + Cohere v2)
+function extractStreamDelta(j) {
+  if (!j || typeof j !== 'object') return null;
+  const c0 = j.choices && j.choices[0];
+  if (c0) {
+    if (c0.delta && c0.delta.content != null) {
+      const d = c0.delta.content;
+      if (typeof d === 'string') return d;
+      if (Array.isArray(d)) return d.map(x => (x && (x.text || x.content)) || '').join('');
+    }
+    if (typeof c0.text === 'string' && c0.text) return c0.text;
+    return null;
+  }
+  if (j.type === 'content_block_delta' && j.delta && typeof j.delta.text === 'string') return j.delta.text;
+  const dm = j.delta && j.delta.message;
+  if (dm && dm.content) {
+    if (typeof dm.content === 'string') return dm.content;
+    if (Array.isArray(dm.content)) return dm.content.map(x => (x && x.text) || '').join('');
+  }
+  if (typeof j.content === 'string' && j.content && !j.type) return j.content;
+  return null;
+}
+
+// Sağlayıcıya stream:true ile istek atar, SSE satırlarını chunk chunk iletir
+function proxyStream(targetUrl, headers, body, cb) {
+  const u = new URL(targetUrl);
+  const req = https.request({
+    hostname: u.hostname, port: 443, path: u.pathname, method: 'POST',
+    headers: { ...headers, 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) },
+    timeout: 60000
+  }, (res) => {
+    if (res.statusCode >= 400) {
+      let data = '';
+      res.on('data', c => data += c);
+      res.on('end', () => cb.onHttpError(data, res.statusCode));
+      res.on('error', () => cb.onHttpError(data, res.statusCode));
+      return;
+    }
+    let buf = '';
+    let raw = '';
+    res.on('data', (c) => {
+      const s = c.toString('utf8');
+      raw += s;
+      buf += s;
+      let i;
+      while ((i = buf.indexOf('\n')) >= 0) {
+        const line = buf.slice(0, i).replace(/\r$/, '');
+        buf = buf.slice(i + 1);
+        if (line.slice(0, 5) !== 'data:') continue;
+        const payload = line.slice(5).trim();
+        if (!payload || payload === '[DONE]') continue;
+        try {
+          const t = extractStreamDelta(JSON.parse(payload));
+          if (t) cb.onDelta(t);
+        } catch (e) {}
+      }
+    });
+    res.on('end', () => cb.onEnd(raw));
+    res.on('error', (e) => cb.onConnError(e));
+  });
+  req.on('error', e => cb.onConnError(e));
+  req.on('timeout', () => { req.destroy(); cb.onConnError(new Error('timeout')); });
   req.write(body);
   req.end();
 }
@@ -566,8 +635,76 @@ const server = http.createServer((req, res) => {
         const url = ENDPOINTS[p.provider];
         if (!url) return res.end(JSON.stringify({ error: 'Bilinmeyen provider: ' + p.provider }));
 
-        const reqBody = JSON.stringify(buildReqBody(p.provider, p.model, p.messages));
+        const wantStream = p.stream === true;
+        const reqBody = JSON.stringify(buildReqBody(p.provider, p.model, p.messages, wantStream));
         const providerLabel = p.provider.toUpperCase();
+
+        if (wantStream) {
+          res.writeHead(200, {
+            'Content-Type': 'text/event-stream; charset=utf-8',
+            'Cache-Control': 'no-cache',
+            'Connection': 'keep-alive'
+          });
+          const send = (o) => { try { res.write('data: ' + JSON.stringify(o) + '\n\n'); } catch (e) {} };
+          let started = false;
+          let finished = false;
+          let gen = 0;
+          const finishOk = () => { if (finished) return; finished = true; send({ done: true }); res.end(); };
+          const fail = (msg) => { if (finished) return; finished = true; send({ error: msg }); res.end(); };
+
+          const attempt = (retriesLeft) => {
+            const myGen = ++gen;
+            let ended = false;
+            const alive = () => !finished && myGen === gen && !ended;
+            proxyStream(url, authHeaders(p.provider, k), reqBody, {
+              onDelta: (txt) => { if (!alive()) return; started = true; send({ delta: txt }); },
+              onHttpError: (data, status) => {
+                if (!alive()) return;
+                ended = true;
+                let apiMsg = null;
+                try {
+                  const j = JSON.parse(data);
+                  const e = j && j.error;
+                  apiMsg = (typeof e === 'string' ? e : (e && e.message)) || (j && j.message) || null;
+                } catch (e2) {}
+                if ((status === 429 || status === 503) && retriesLeft > 0) {
+                  return setTimeout(() => attempt(retriesLeft - 1), 2000);
+                }
+                const label = status >= 400 ? providerLabel + ' API ' + status + ': ' : '';
+                fail(label + (apiMsg || 'Model şu an yanıt vermiyor (soğuk başlangıç olabilir, tekrar deneyin)'));
+              },
+              onConnError: (err) => {
+                if (!alive()) return;
+                ended = true;
+                if (!started && retriesLeft > 0 && (err.message === 'timeout' || err.code === 'ECONNRESET')) {
+                  return setTimeout(() => attempt(retriesLeft - 1), 1500);
+                }
+                if (!started) {
+                  fail('Bağlantı hatası: ' + err.message);
+                } else {
+                  finished = true;
+                  res.end();
+                }
+              },
+              onEnd: (raw) => {
+                if (!alive()) return;
+                ended = true;
+                if (started) return finishOk();
+                try {
+                  const j = JSON.parse(raw);
+                  const reply = extractReply(p.provider, j);
+                  if (reply) { send({ delta: reply }); return finishOk(); }
+                  const e = j && j.error;
+                  const apiMsg = (typeof e === 'string' ? e : (e && e.message)) || (j && j.message) || null;
+                  if (apiMsg) return fail(providerLabel + ': ' + apiMsg);
+                } catch (e2) {}
+                fail('Yanıt çözümlenemedi');
+              }
+            });
+          };
+          attempt(2);
+          return;
+        }
 
         const attempt = (retriesLeft) => {
           proxy(url, authHeaders(p.provider, k), reqBody, (err, data, status) => {
